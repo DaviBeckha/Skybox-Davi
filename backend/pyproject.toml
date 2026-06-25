@@ -15,6 +15,9 @@ dependencies = [
     "rq>=1.16",
     "redis>=5.0",
     "polars>=1.0",
+    "duckdb>=1.0",
+    "awpy>=2.0",
+    "demoparser2>=0.4",
 ]
 
 [project.optional-dependencies]

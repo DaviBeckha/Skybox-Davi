@@ -14,7 +14,7 @@
 | 04 | Backend mínimo | 02 | [x] |
 | 05 | Importação de demos | 04 | [x] |
 | 06 | Jobs de parsing | 05 | [x] |
-| 07 | Parsing real | 06 | [ ] |
+| 07 | Parsing real | 06 | [x] |
 | 08 | API de Analytics | 07 | [ ] |
 | 09 | Frontend base | 04 | [ ] |
 | 10 | Dashboard | 08, 09 | [ ] |
@@ -74,14 +74,14 @@
 
 ## Phase 07 — Parsing real
 
-- [ ] Uma demo real (ou fixture) é parseada e gera os Parquet particionados por `match_id` com as colunas do contrato.
-- [ ] As tabelas `grenades` e `blinds` são geradas com os eventos de granada/flash (não ficam vazias quando há utility na demo).
-- [ ] `rounds.parquet` traz `bomb_site`, `t_team` e `ct_team` nos rounds com plant.
-- [ ] `shots.parquet` é gerado (1 linha por disparo) e permite contar tiros por arma por player.
-- [ ] Metadados (match/players/rounds) gravados no PostgreSQL.
-- [ ] DuckDB consegue consultar os dados processados via views.
-- [ ] Schema do parsing real == schema do mock fallback.
-- [ ] Tratamento de erro para demo inválida (status `failed`).
+- [x] Uma demo real (ou fixture) é parseada e gera os Parquet particionados por `match_id` com as colunas do contrato.
+- [x] As tabelas `grenades` e `blinds` são geradas com os eventos de granada/flash (não ficam vazias quando há utility na demo).
+- [x] `rounds.parquet` traz `bomb_site`, `t_team` e `ct_team` nos rounds com plant.
+- [x] `shots.parquet` é gerado (1 linha por disparo) e permite contar tiros por arma por player.
+- [x] Metadados (match/players/rounds) gravados no PostgreSQL.
+- [x] DuckDB consegue consultar os dados processados via views.
+- [x] Schema do parsing real == schema do mock fallback.
+- [x] Tratamento de erro para demo inválida (status `failed`).
 
 ## Phase 08 — API de Analytics
 

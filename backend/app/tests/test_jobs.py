@@ -20,7 +20,8 @@ def _make_pending_demo(session_factory) -> uuid.UUID:
     return demo_id
 
 
-def test_parse_demo_job_mock_success(session_factory, tmp_data) -> None:
+def test_parse_demo_job_mock_success(session_factory, tmp_data, monkeypatch) -> None:
+    monkeypatch.setattr("app.workers.jobs.real_parser_available", lambda: False)
     demo_id = _make_pending_demo(session_factory)
 
     result = parse_demo_job(str(demo_id))
@@ -48,6 +49,7 @@ def test_parse_demo_job_mock_success(session_factory, tmp_data) -> None:
 def test_parse_demo_job_failure_marks_failed(
     session_factory, tmp_data, monkeypatch
 ) -> None:
+    monkeypatch.setattr("app.workers.jobs.real_parser_available", lambda: False)
     demo_id = _make_pending_demo(session_factory)
 
     def boom(*_args, **_kwargs):
