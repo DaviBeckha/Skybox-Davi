@@ -35,7 +35,7 @@ Cada phase é **auto-contida** — pode ser colada como prompt mesmo sem o `cont
 | #  | Phase                                | Depende de | Status |
 |----|--------------------------------------|------------|--------|
 | 01 | [Auditoria do repositório](01-auditoria.md) | —          | [x]    |
-| 02 | [Estrutura base](02-estrutura.md)           | 01         | [ ]    |
+| 02 | [Estrutura base](02-estrutura.md)           | 01         | [x]    |
 | 03 | [Documentação base](03-documentacao-base.md) | 02        | [ ]    |
 | 04 | [Backend mínimo](04-backend-minimo.md)      | 02         | [ ]    |
 | 05 | [Importação de demos](05-importacao-demos.md) | 04       | [ ]    |

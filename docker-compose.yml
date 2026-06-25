@@ -1,0 +1,10 @@
+# docker-compose — cs2-lab (infra local)
+#
+# PLACEHOLDER (Phase 02). Os serviços reais são adicionados nas phases seguintes:
+#   - PostgreSQL (metadados) -> Phase 04
+#   - Redis (fila de jobs RQ) -> Phase 06
+#
+# Mantido intencionalmente sem serviços nesta phase para não introduzir
+# lógica/infra de aplicação antes do escopo previsto.
+
+services: {}

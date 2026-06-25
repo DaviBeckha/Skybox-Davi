@@ -1,0 +1,47 @@
+# ===== Python =====
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# ===== Node / Next.js =====
+node_modules/
+.next/
+out/
+.turbo/
+npm-debug.log*
+*.tsbuildinfo
+
+# ===== Dados pesados (não versionar conteúdo, manter pastas via .gitkeep) =====
+data/raw_demos/*
+!data/raw_demos/.gitkeep
+data/processed/parquet/*
+!data/processed/parquet/.gitkeep
+data/processed/duckdb/*
+!data/processed/duckdb/.gitkeep
+*.dem
+*.duckdb
+*.parquet
+
+# ===== Assets de mapa baixados (radares/metadata entram na Phase 08) =====
+data/maps/radars/*
+!data/maps/radars/.gitkeep
+data/maps/radar_info/*
+!data/maps/radar_info/.gitkeep
+
+# ===== Ambiente / segredos =====
+.env
+.env.*
+!.env.example
+
+# ===== Editores / SO =====
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
