@@ -10,7 +10,7 @@
 |----|-------|------------|--------|
 | 01 | Auditoria do repositório | — | [x] |
 | 02 | Estrutura base | 01 | [x] |
-| 03 | Documentação base | 02 | [ ] |
+| 03 | Documentação base | 02 | [x] |
 | 04 | Backend mínimo | 02 | [ ] |
 | 05 | Importação de demos | 04 | [ ] |
 | 06 | Jobs de parsing | 05 | [ ] |
@@ -41,12 +41,12 @@
 - [x] `.gitignore` cobre artefatos de Python, Node e dados pesados.
 - [x] Nenhuma lógica de aplicação foi adicionada.
 
-## Phase 03 — Documentação base
+## Phase 03 — Documentação base ✅
 
-- [ ] `AGENTS.md` cobre comandos back/front (incluindo docker compose e Alembic), padrões, convenções, testes/lint e definição de pronto.
-- [ ] `docs/research.md` cobre todas as tecnologias listadas (incluindo PostgreSQL) e o tema de assets de mapa com fontes.
-- [ ] `docs/architecture.md` descreve fluxo de dados e armazenamento e referencia o contrato de dados.
-- [ ] Documentação coerente com as Convenções técnicas do índice.
+- [x] `AGENTS.md` cobre comandos back/front (incluindo docker compose e Alembic), padrões, convenções, testes/lint e definição de pronto.
+- [x] `docs/research.md` cobre todas as tecnologias listadas (incluindo PostgreSQL) e o tema de assets de mapa com fontes.
+- [x] `docs/architecture.md` descreve fluxo de dados e armazenamento e referencia o contrato de dados.
+- [x] Documentação coerente com as Convenções técnicas do índice.
 
 ## Phase 04 — Backend mínimo
 
