@@ -105,6 +105,7 @@ Variável de ambiente: `NEXT_PUBLIC_API_URL` (ex.: `http://localhost:8000`).
 ## Como rodar testes e lint (resumo)
 
 - **Backend:** `uv run pytest` (testes) e `uv run ruff check .` (lint).
+  - Os testes usam **PostgreSQL exclusivamente** (sem SQLite): criam e usam um banco dedicado **`cs2_lab_test`** no mesmo container. Suba o Postgres antes (`docker compose up -d postgres`).
 - **Frontend:** `npm run lint` e `npm run build` (o build precisa passar).
 
 ## Definição de Pronto (DoD)
