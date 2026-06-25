@@ -1,10 +1,26 @@
 # docker-compose — cs2-lab (infra local)
 #
-# PLACEHOLDER (Phase 02). Os serviços reais são adicionados nas phases seguintes:
-#   - PostgreSQL (metadados) -> Phase 04
-#   - Redis (fila de jobs RQ) -> Phase 06
-#
-# Mantido intencionalmente sem serviços nesta phase para não introduzir
-# lógica/infra de aplicação antes do escopo previsto.
+# PostgreSQL (metadados) -> Phase 04
+# Redis (fila de jobs RQ) -> adicionado na Phase 06
 
-services: {}
+services:
+  postgres:
+    image: postgres:16
+    container_name: cs2lab-postgres
+    environment:
+      POSTGRES_USER: cs2
+      POSTGRES_PASSWORD: cs2
+      POSTGRES_DB: cs2_lab
+    ports:
+      # Host 5544 -> container 5432 (5432/5433 já ocupadas por PostgreSQL local)
+      - "5544:5432"
+    volumes:
+      - cs2lab_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cs2 -d cs2_lab"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  cs2lab_pgdata:

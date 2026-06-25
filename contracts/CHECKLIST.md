@@ -11,7 +11,7 @@
 | 01 | Auditoria do repositório | — | [x] |
 | 02 | Estrutura base | 01 | [x] |
 | 03 | Documentação base | 02 | [x] |
-| 04 | Backend mínimo | 02 | [ ] |
+| 04 | Backend mínimo | 02 | [x] |
 | 05 | Importação de demos | 04 | [ ] |
 | 06 | Jobs de parsing | 05 | [ ] |
 | 07 | Parsing real | 06 | [ ] |
@@ -48,13 +48,13 @@
 - [x] `docs/architecture.md` descreve fluxo de dados e armazenamento e referencia o contrato de dados.
 - [x] Documentação coerente com as Convenções técnicas do índice.
 
-## Phase 04 — Backend mínimo
+## Phase 04 — Backend mínimo ✅
 
-- [ ] `docker compose up -d postgres` sobe o banco; `alembic upgrade head` cria as tabelas.
-- [ ] `uvicorn app.main:app --reload` sobe sem erros e conecta ao PostgreSQL.
-- [ ] `GET /health` retorna `{ "status": "ok" }`.
-- [ ] Tabelas `demos/matches/players/rounds` batem com o contrato de dados.
-- [ ] `pytest` passa o teste do healthcheck.
+- [x] `docker compose up -d postgres` sobe o banco; `alembic upgrade head` cria as tabelas. *(host 5544 → container 5432; 5432/5433 ocupadas por Postgres local)*
+- [x] `uvicorn app.main:app --reload` sobe sem erros e conecta ao PostgreSQL.
+- [x] `GET /health` retorna `{ "status": "ok" }`.
+- [x] Tabelas `demos/matches/players/rounds` batem com o contrato de dados.
+- [x] `pytest` passa o teste do healthcheck.
 
 ## Phase 05 — Importação de demos
 

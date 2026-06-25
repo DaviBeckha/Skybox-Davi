@@ -84,7 +84,9 @@ uv run ruff check .                  # lint
 uv run ruff format .                 # format
 ```
 
-Variável de ambiente principal: `DATABASE_URL` (ex.: `postgresql+psycopg://cs2:cs2@localhost:5432/cs2_lab`) e `REDIS_URL` (ex.: `redis://localhost:6379/0`). Use um `.env` (ver `.env.example` quando criado na Phase 04).
+Variável de ambiente principal: `DATABASE_URL` (ex.: `postgresql+psycopg://cs2:cs2@localhost:5544/cs2_lab`) e `REDIS_URL` (ex.: `redis://localhost:6379/0`). Use um `.env` (ver `.env.example`).
+
+> **Nota de ambiente (Phase 04):** o container Postgres publica na porta **5544** do host (mapeada para a 5432 interna) porque as portas 5432 e 5433 já estavam ocupadas por instalações locais de PostgreSQL. Se elas estiverem livres na sua máquina, pode ajustar `docker-compose.yml` e `DATABASE_URL` para a porta que preferir.
 
 ## Comandos — Frontend
 
