@@ -11,6 +11,7 @@ dependencies = [
     "sqlalchemy>=2.0",
     "psycopg[binary]>=3.2",
     "alembic>=1.13",
+    "python-multipart>=0.0.9",
 ]
 
 [project.optional-dependencies]
@@ -33,3 +34,5 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
+# B008: chamadas em defaults (Depends/File) são o padrão idiomático do FastAPI.
+ignore = ["B008"]

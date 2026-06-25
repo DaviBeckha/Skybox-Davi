@@ -12,7 +12,7 @@
 | 02 | Estrutura base | 01 | [x] |
 | 03 | Documentação base | 02 | [x] |
 | 04 | Backend mínimo | 02 | [x] |
-| 05 | Importação de demos | 04 | [ ] |
+| 05 | Importação de demos | 04 | [x] |
 | 06 | Jobs de parsing | 05 | [ ] |
 | 07 | Parsing real | 06 | [ ] |
 | 08 | API de Analytics | 07 | [ ] |
@@ -56,13 +56,13 @@
 - [x] Tabelas `demos/matches/players/rounds` batem com o contrato de dados.
 - [x] `pytest` passa o teste do healthcheck.
 
-## Phase 05 — Importação de demos
+## Phase 05 — Importação de demos ✅
 
-- [ ] Upload de um `.dem` cria registro com status `pending` e copia o arquivo para `data/raw_demos/`.
-- [ ] Upload de arquivo não-`.dem` é rejeitado com erro claro (400).
-- [ ] `GET /demos` lista a demo importada.
-- [ ] `GET /demos/{demo_id}` retorna a demo correta (e 404 quando não existe).
-- [ ] Campos persistidos batem com o contrato de dados.
+- [x] Upload de um `.dem` cria registro com status `pending` e copia o arquivo para `data/raw_demos/`.
+- [x] Upload de arquivo não-`.dem` é rejeitado com erro claro (400).
+- [x] `GET /demos` lista a demo importada.
+- [x] `GET /demos/{demo_id}` retorna a demo correta (e 404 quando não existe).
+- [x] Campos persistidos batem com o contrato de dados.
 
 ## Phase 06 — Jobs de parsing
 
