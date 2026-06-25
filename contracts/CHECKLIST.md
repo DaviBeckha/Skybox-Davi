@@ -13,7 +13,7 @@
 | 03 | Documentação base | 02 | [x] |
 | 04 | Backend mínimo | 02 | [x] |
 | 05 | Importação de demos | 04 | [x] |
-| 06 | Jobs de parsing | 05 | [ ] |
+| 06 | Jobs de parsing | 05 | [x] |
 | 07 | Parsing real | 06 | [ ] |
 | 08 | API de Analytics | 07 | [ ] |
 | 09 | Frontend base | 04 | [ ] |
@@ -64,13 +64,13 @@
 - [x] `GET /demos/{demo_id}` retorna a demo correta (e 404 quando não existe).
 - [x] Campos persistidos batem com o contrato de dados.
 
-## Phase 06 — Jobs de parsing
+## Phase 06 — Jobs de parsing ✅
 
-- [ ] Importar uma demo enfileira um job e a demo passa por `pending → parsing → parsed`.
-- [ ] Em caso de erro, a demo vai para `failed` com erro logado e gravado em `demos.error`.
-- [ ] A API responde normalmente enquanto o parsing roda (não bloqueia).
-- [ ] Com o parser real ausente, o mock fallback conclui o job como `parsed` produzindo dados no schema do contrato.
-- [ ] Worker RQ documentado (como iniciar).
+- [x] Importar uma demo enfileira um job e a demo passa por `pending → parsing → parsed`.
+- [x] Em caso de erro, a demo vai para `failed` com erro logado e gravado em `demos.error`.
+- [x] A API responde normalmente enquanto o parsing roda (não bloqueia).
+- [x] Com o parser real ausente, o mock fallback conclui o job como `parsed` produzindo dados no schema do contrato.
+- [x] Worker RQ documentado (como iniciar): `uv run python -m app.workers.run_worker`.
 
 ## Phase 07 — Parsing real
 

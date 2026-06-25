@@ -76,7 +76,8 @@ uv run alembic revision --autogenerate -m "mensagem"   # gera nova migration
 uv run uvicorn app.main:app --reload # http://localhost:8000  (health: /health)
 
 # Worker de parsing (RQ) — Phase 06+
-uv run rq worker cs2-parsing         # consome a fila de jobs
+uv run python -m app.workers.run_worker   # consome a fila "cs2-parsing"
+# (usa SimpleWorker, sem fork — funciona no Windows; substitui o `rq worker`)
 
 # Testes e lint
 uv run pytest                        # testes

@@ -16,6 +16,7 @@ from app.core import paths
 from app.models.schemas import DemoRead
 from app.storage.db import get_db
 from app.storage.models import Demo
+from app.workers.queue import enqueue_parse
 
 router = APIRouter(prefix="/demos", tags=["demos"])
 
@@ -49,6 +50,10 @@ def import_demo(
     db.add(demo)
     db.commit()
     db.refresh(demo)
+
+    # Enfileira o parsing (assíncrono). Não bloqueia a resposta; se o Redis
+    # estiver indisponível, a demo permanece `pending` e pode ser reprocessada.
+    enqueue_parse(str(demo.id))
     return demo
 
 

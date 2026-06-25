@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from app.core import paths
 from app.core.config import settings
 from app.main import app
+from app.storage import db
 from app.storage.db import Base, get_db
 
 TEST_DB_NAME = "cs2_lab_test"
@@ -48,21 +49,53 @@ def _engine() -> Iterator[Engine]:
 
 
 @pytest.fixture()
-def client(_engine: Engine, tmp_path, monkeypatch) -> Iterator[TestClient]:
-    # Estado limpo a cada teste.
+def session_factory(_engine: Engine, monkeypatch) -> sessionmaker:
+    """Factory de sessões ligada ao banco de teste. Limpa as tabelas e aponta
+    `db.SessionLocal` para o banco de teste (usado pelos jobs)."""
     with _engine.begin() as conn:
         conn.execute(text(f"TRUNCATE {_TABLES} CASCADE"))
+    factory = sessionmaker(bind=_engine, autoflush=False, autocommit=False)
+    monkeypatch.setattr(db, "SessionLocal", factory)
+    return factory
 
-    session_local = sessionmaker(bind=_engine, autoflush=False, autocommit=False)
 
+@pytest.fixture()
+def tmp_data(tmp_path, monkeypatch) -> "object":
+    """Redireciona os diretórios de dados para um tmp."""
+    raw = tmp_path / "raw_demos"
+    parquet = tmp_path / "parquet"
+    duckdb = tmp_path / "duckdb"
+    for d in (raw, parquet, duckdb):
+        d.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setattr(paths, "RAW_DEMOS_DIR", raw)
+    monkeypatch.setattr(paths, "PARQUET_DIR", parquet)
+    monkeypatch.setattr(paths, "DUCKDB_DIR", duckdb)
+    monkeypatch.setattr(paths, "DUCKDB_PATH", duckdb / "cs2_lab.duckdb")
+    return tmp_path
+
+
+@pytest.fixture()
+def db_session(session_factory: sessionmaker) -> Iterator[Session]:
+    s = session_factory()
+    try:
+        yield s
+    finally:
+        s.close()
+
+
+@pytest.fixture()
+def client(
+    session_factory: sessionmaker, tmp_data, monkeypatch
+) -> Iterator[TestClient]:
     def override_get_db() -> Iterator[Session]:
-        db = session_local()
+        s = session_factory()
         try:
-            yield db
+            yield s
         finally:
-            db.close()
+            s.close()
 
-    monkeypatch.setattr(paths, "RAW_DEMOS_DIR", tmp_path / "raw_demos")
+    # Por padrão, não dependemos do Redis nos testes de API.
+    monkeypatch.setattr("app.api.routes_demos.enqueue_parse", lambda _demo_id: None)
     app.dependency_overrides[get_db] = override_get_db
     try:
         with TestClient(app) as c:

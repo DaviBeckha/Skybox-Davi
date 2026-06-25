@@ -12,6 +12,9 @@ dependencies = [
     "psycopg[binary]>=3.2",
     "alembic>=1.13",
     "python-multipart>=0.0.9",
+    "rq>=1.16",
+    "redis>=5.0",
+    "polars>=1.0",
 ]
 
 [project.optional-dependencies]

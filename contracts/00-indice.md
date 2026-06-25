@@ -39,7 +39,7 @@ Cada phase é **auto-contida** — pode ser colada como prompt mesmo sem o `cont
 | 03 | [Documentação base](03-documentacao-base.md) | 02        | [x]    |
 | 04 | [Backend mínimo](04-backend-minimo.md)      | 02         | [x]    |
 | 05 | [Importação de demos](05-importacao-demos.md) | 04       | [x]    |
-| 06 | [Jobs de parsing](06-jobs-parsing.md)       | 05         | [ ]    |
+| 06 | [Jobs de parsing](06-jobs-parsing.md)       | 05         | [x]    |
 | 07 | [Parsing real](07-parsing-real.md)          | 06         | [ ]    |
 | 08 | [API de Analytics](08-api-analytics.md)     | 07         | [ ]    |
 | 09 | [Frontend base](09-frontend-base.md)        | 04         | [ ]    |
