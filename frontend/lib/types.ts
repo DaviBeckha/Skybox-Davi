@@ -129,7 +129,16 @@ export type HeatmapPayload = {
   filtersApplied: HeatmapFilters;
 };
 
-export type GrenadeCounts = Record<GrenadeType | "total", number>;
+// `grenades_thrown` agrupa incendiary em molotov (contrato seção 4):
+// he/flash/smoke/molotov/decoy/total.
+export type GrenadeCounts = {
+  he: number;
+  flash: number;
+  smoke: number;
+  molotov: number;
+  decoy: number;
+  total: number;
+};
 
 export type UtilityStats = {
   steamId: string;
