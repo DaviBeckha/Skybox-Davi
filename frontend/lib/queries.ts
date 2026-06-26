@@ -27,7 +27,14 @@ export function useHealthQuery() {
 export function useDemosQuery() {
   return useQuery({
     queryKey: queryKeys.demos,
-    queryFn: api.getDemos
+    queryFn: api.getDemos,
+    // Enquanto houver parsing em andamento, refaz a busca para refletir o status.
+    refetchInterval: (query) =>
+      (query.state.data ?? []).some(
+        (demo) => demo.status === "pending" || demo.status === "parsing"
+      )
+        ? 2500
+        : false
   });
 }
 

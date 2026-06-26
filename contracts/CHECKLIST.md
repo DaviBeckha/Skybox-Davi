@@ -16,9 +16,9 @@
 | 06 | Jobs de parsing | 05 | [x] |
 | 07 | Parsing real | 06 | [x] |
 | 08 | API de Analytics | 07 | [x] |
-| 09 | Frontend base | 04 | [ ] |
-| 10 | Dashboard | 08, 09 | [ ] |
-| 11 | Demos UI | 05, 09 | [ ] |
+| 09 | Frontend base | 04 | [x] |
+| 10 | Dashboard | 08, 09 | [x] |
+| 11 | Demos UI | 05, 09 | [x] |
 | 12 | Match Report | 08, 09 | [ ] |
 | 13 | Replay 2D | 08, 09 | [ ] |
 | 14 | Heatmaps | 08, 09 | [ ] |
@@ -97,30 +97,30 @@
 - [x] `GET /matches/{id}/heatmap?type=kills|deaths|path|utility|grenades` responde para cada tipo (incluindo `path&player=<id>` para movimento), com pontos convertidos.
 - [x] `GET /maps`, `/maps/{name}/radar`, `/maps/{name}/metadata` respondem (imagem + metadata reais).
 
-## Phase 09 — Frontend base
+## Phase 09 — Frontend base ✅
 
-- [ ] `npm run dev` sobe o frontend e abre no navegador.
-- [ ] Navegação entre as áreas principais funciona (mesmo com telas placeholder).
-- [ ] Tema escuro aplicado.
-- [ ] `lib/api.ts` consegue chamar o backend local (ex.: `/health` ou `/demos`).
-- [ ] Tipos em `lib/types.ts` correspondem ao contrato de dados.
-- [ ] `npm run lint` e `npm run build` passam.
+- [x] `npm run dev` sobe o frontend e abre no navegador.
+- [x] Navegação entre as áreas principais funciona (mesmo com telas placeholder).
+- [x] Tema escuro aplicado.
+- [x] `lib/api.ts` consegue chamar o backend local (ex.: `/health` ou `/demos`).
+- [x] Tipos em `lib/types.ts` correspondem ao contrato de dados.
+- [x] `npm run lint` e `npm run build` passam.
 
-## Phase 10 — Dashboard
+## Phase 10 — Dashboard ✅
 
-- [ ] Cards exibem os totais corretos (a partir da API ou de mock).
-- [ ] Últimos jobs e últimas demos aparecem com status.
-- [ ] Atalhos navegam para as áreas corretas.
-- [ ] Estados de loading e erro tratados.
-- [ ] `npm run lint` e `npm run build` passam.
+- [x] Cards exibem os totais corretos (a partir da API ou de mock).
+- [x] Últimos jobs e últimas demos aparecem com status.
+- [x] Atalhos navegam para as áreas corretas.
+- [x] Estados de loading e erro tratados.
+- [x] `npm run lint` e `npm run build` passam.
 
-## Phase 11 — Demos UI
+## Phase 11 — Demos UI ✅
 
-- [ ] É possível importar um `.dem` pela UI e ele aparece na lista.
-- [ ] Status de parsing é exibido e atualiza conforme evolui.
-- [ ] Botão "abrir relatório" disponível quando a demo está `parsed`.
-- [ ] Erro de parsing é exibido de forma clara.
-- [ ] `npm run lint` e `npm run build` passam.
+- [x] É possível importar um `.dem` pela UI e ele aparece na lista.
+- [x] Status de parsing é exibido e atualiza conforme evolui (polling via TanStack Query).
+- [x] Botão "abrir relatório" disponível quando a demo está `parsed`.
+- [x] Erro de parsing é exibido de forma clara.
+- [x] `npm run lint` e `npm run build` passam.
 
 ## Phase 12 — Match Report
 
