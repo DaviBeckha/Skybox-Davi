@@ -17,16 +17,30 @@ def ratio(num: float, den: float, ndigits: int = 4) -> float:
     return round(num / den, ndigits) if den else 0.0
 
 
-def normalize_weapon(weapon: str | None) -> str:
-    """Nome da arma em minúsculas e sem o prefixo `weapon_` (merge na leitura).
+# Famílias cujo nome diverge entre eventos no demo: o disparo (`weapon_fire`) e
+# a kill usam a variante (silenciada), mas o dano (`player_hurt`) usa outro nome.
+# Sem colapsar num token único, o cruzamento disparo×acerto zera — a M4A1-S
+# aparecia com dezenas de disparos e 0 acertos. O dano não distingue M4A4/M4A1-S
+# (nem USP-S/P2000), então a unificação é a única forma de ter acurácia correta.
+_WEAPON_ALIASES = {
+    "m4a1_silencer": "m4a1",
+    "m4a4": "m4a1",
+    "usp_silencer": "usp",
+    "hkp2000": "usp",
+}
 
-    Garante que dados já parseados com nomes divergentes (`ak47` vs `weapon_ak47`)
-    sejam contados como uma arma só, sem precisar re-parsear.
+
+def normalize_weapon(weapon: str | None) -> str:
+    """Nome da arma em minúsculas, sem `weapon_` e com famílias unificadas.
+
+    Garante que dados já parseados com nomes divergentes (`ak47` vs `weapon_ak47`,
+    ou `m4a1_silencer`/`m4a1` entre disparo e dano) sejam contados como uma arma
+    só, sem precisar re-parsear.
     """
     text = (weapon or "").strip().lower()
     if text.startswith("weapon_"):
         text = text[len("weapon_") :]
-    return text
+    return _WEAPON_ALIASES.get(text, text)
 
 
 # --------------------------------------------------------------------------- #

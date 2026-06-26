@@ -22,7 +22,15 @@ class _FakeAwpyDemo:
         # Header real do awpy só traz map_name (sem times/tick_rate).
         self.header = {"map_name": "de_mirage"}
 
-    def parse(self) -> None:
+    def parse(
+        self,
+        events: list[str] | None = None,
+        player_props: list[str] | None = None,
+        other_props: list[str] | None = None,
+    ) -> None:
+        # Registra os props pedidos: o adapter precisa solicitar "yaw" ao awpy,
+        # senão o ângulo de mira (FOV) sai nulo.
+        self.player_props = player_props
         self.rounds = pl.DataFrame(
             [
                 {
@@ -115,6 +123,7 @@ class _FakeAwpyDemo:
                     "X": 9.0,
                     "Y": 19.0,
                     "Z": 0.0,
+                    "yaw": -42.5,
                 },
                 {
                     "round_num": 1,
@@ -127,6 +136,7 @@ class _FakeAwpyDemo:
                     "X": 29.0,
                     "Y": 39.0,
                     "Z": 0.0,
+                    "yaw": 31.0,
                 },
             ]
         )
@@ -212,6 +222,8 @@ def test_awpy_adapter_maps_real_columns_to_contract_schema(monkeypatch) -> None:
     tick_row = parsed.tables["ticks"][0]
     assert tick_row["side"] in {"T", "CT"}
     assert tick_row["x"] == 9.0
+    # yaw (ângulo de mira) mapeado a partir dos ticks do awpy — alimenta o FOV.
+    assert tick_row["yaw"] == -42.5
 
     # granadas/flashes vêm do supplement (demoparser2); side resolvido via ticks.
     assert parsed.tables["grenades"][0]["grenade_type"] == "flash"
@@ -224,3 +236,21 @@ def test_awpy_adapter_maps_real_columns_to_contract_schema(monkeypatch) -> None:
         assert all("radar_x" not in row for row in parsed.tables[table])
         if parsed.tables[table]:
             assert set(parsed.tables[table][0]) == set(PARQUET_SCHEMAS[table])
+
+
+def test_awpy_parse_requests_yaw_prop(monkeypatch) -> None:
+    """O adapter deve pedir explicitamente o prop 'yaw' ao awpy (senão o FOV some)."""
+    monkeypatch.setattr(
+        "app.parsers.parse_with_demoparser2.extract_utility_events", _fake_utility
+    )
+    holder: dict[str, _FakeAwpyDemo] = {}
+
+    def factory(path: str) -> _FakeAwpyDemo:
+        demo = _FakeAwpyDemo(path)
+        holder["demo"] = demo
+        return demo
+
+    parse_demo(Path("fixture.dem"), match_id=str(uuid.uuid4()), demo_factory=factory)
+
+    assert holder["demo"].player_props is not None
+    assert "yaw" in holder["demo"].player_props

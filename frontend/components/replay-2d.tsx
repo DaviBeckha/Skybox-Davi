@@ -3,14 +3,23 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { PageHeader } from "@/components/page-header";
+import { GrenadeIcon, GRENADE_COLORS } from "@/components/replay-grenade-icon";
+import { ReplayTeamEditor } from "@/components/replay-team-editor";
 import { DEFAULT_API_BASE_URL } from "@/lib/api";
 import {
   useMapMetadataQuery,
+  useMatchPlayersQuery,
   useMatchRoundsQuery,
   useMatchSummaryQuery,
   useReplayQuery
 } from "@/lib/queries";
-import type { ReplayPlayer } from "@/lib/types";
+import {
+  resolveColor,
+  resolveTeamName,
+  useReplayTeamSettings,
+  type TeamKey
+} from "@/lib/teamOverrides";
+import type { GrenadeType, ReplayPlayer, Side } from "@/lib/types";
 
 const SPEEDS = [0.25, 0.5, 1, 2, 4];
 // Densidade nativa do parser (1 frame a cada ~8 ticks); a suavidade vem da
@@ -39,8 +48,12 @@ function lerpAngle(a: number | null, b: number | null, t: number): number | null
 export function Replay2D({ matchId }: { matchId: string }) {
   const summaryQuery = useMatchSummaryQuery(matchId);
   const roundsQuery = useMatchRoundsQuery(matchId);
+  const playersQuery = useMatchPlayersQuery(matchId);
   const map = summaryQuery.data?.map ?? "";
   const metadataQuery = useMapMetadataQuery(map);
+
+  const { settings, setSettings } = useReplayTeamSettings(matchId);
+  const [showTeamEditor, setShowTeamEditor] = useState(false);
 
   const [round, setRound] = useState(1);
   const [playhead, setPlayhead] = useState(0); // posição contínua em "frames"
@@ -55,6 +68,25 @@ export function Replay2D({ matchId }: { matchId: string }) {
   const imageHeight = metadataQuery.data?.imageHeight ?? 1024;
   const radarUrl = map ? `${DEFAULT_API_BASE_URL}/maps/${encodeURIComponent(map)}/radar` : "";
   const tickRate = replayQuery.data?.tickRate ?? 64;
+
+  // Nomes de time vindos do demo e mapa steamId -> time (A/B), constante na
+  // partida. Permite colorir/agrupar por TIME mesmo após a troca de lado.
+  const teamNames = useMemo<Record<TeamKey, string | null>>(
+    () => ({ A: summaryQuery.data?.teamA ?? null, B: summaryQuery.data?.teamB ?? null }),
+    [summaryQuery.data]
+  );
+  const teamKeyBySteam = useMemo(() => {
+    const out = new Map<string, TeamKey>();
+    for (const player of playersQuery.data ?? []) {
+      if (teamNames.A && player.team === teamNames.A) {
+        out.set(player.steamId, "A");
+      } else if (teamNames.B && player.team === teamNames.B) {
+        out.set(player.steamId, "B");
+      }
+    }
+    return out;
+  }, [playersQuery.data, teamNames]);
+  const hasTeams = teamKeyBySteam.size > 0 && Boolean(teamNames.A) && Boolean(teamNames.B);
 
   // fps de origem: tick_rate / (delta médio de ticks entre frames).
   const sourceFps = useMemo(() => {
@@ -136,7 +168,17 @@ export function Replay2D({ matchId }: { matchId: string }) {
   const burstWindow = 0.4 * (tickRate || 64);
 
   const activeGrenades = useMemo(() => {
-    const out: Array<{ key: string; type: string; state: string; left: number; top: number }> = [];
+    const out: Array<{
+      key: string;
+      type: GrenadeType;
+      state: "flying" | "active" | "burst";
+      left: number;
+      top: number;
+      ox?: number;
+      oy?: number;
+      lx?: number;
+      ly?: number;
+    }> = [];
     grenades.forEach((g, index) => {
       const hasEnd = g.radarX !== null && g.radarY !== null;
       if (
@@ -153,6 +195,10 @@ export function Replay2D({ matchId }: { matchId: string }) {
           key: `fly-${index}`,
           type: g.type,
           state: "flying",
+          ox: g.startRadarX,
+          oy: g.startRadarY,
+          lx: g.radarX as number,
+          ly: g.radarY as number,
           left: lerp(g.startRadarX, g.radarX as number, f),
           top: lerp(g.startRadarY, g.radarY as number, f)
         });
@@ -170,6 +216,9 @@ export function Replay2D({ matchId }: { matchId: string }) {
     });
     return out;
   }, [grenades, currentTick, burstWindow]);
+
+  const flyingGrenades = activeGrenades.filter((g) => g.state === "flying");
+  const settledGrenades = activeGrenades.filter((g) => g.state !== "flying");
 
   const timelineEvents = useMemo(() => {
     if (frames.length === 0) {
@@ -220,16 +269,39 @@ export function Replay2D({ matchId }: { matchId: string }) {
   }
 
   const summary = summaryQuery.data;
-  const teams: Array<{ side: "T" | "CT"; label: string }> = [
-    { side: "T", label: "Lado T" },
-    { side: "CT", label: "Lado CT" }
-  ];
+  const teamAName = resolveTeamName("A", teamNames.A, settings);
+  const teamBName = resolveTeamName("B", teamNames.B, settings);
+
+  // Agrupa o roster por TIME (quando há nomes de time) ou por LADO (fallback).
+  const rosterGroups = hasTeams
+    ? (["A", "B"] as TeamKey[]).map((key) => {
+        const members = (baseFrame?.players ?? []).filter(
+          (player) => teamKeyBySteam.get(player.steamId) === key
+        );
+        const side = (members[0]?.side ?? "CT") as Side;
+        return {
+          id: key,
+          header: resolveTeamName(key, teamNames[key], settings),
+          side,
+          badge: settings.colorMode === "side" ? null : side,
+          color: resolveColor(side, key, settings),
+          members
+        };
+      })
+    : (["T", "CT"] as Side[]).map((side) => ({
+        id: side,
+        header: side === "T" ? "Lado T" : "Lado CT",
+        side,
+        badge: null,
+        color: resolveColor(side, null, settings),
+        members: (baseFrame?.players ?? []).filter((player) => player.side === side)
+      }));
 
   return (
     <>
       <PageHeader
         eyebrow="Replay 2D"
-        title={`${summary.teamA ?? "Time A"} x ${summary.teamB ?? "Time B"}`}
+        title={`${teamAName} x ${teamBName}`}
         description={`Mapa ${summary.map} · revisão round a round sobre o radar.`}
       />
 
@@ -266,7 +338,40 @@ export function Replay2D({ matchId }: { matchId: string }) {
         <span className="replay-counter">
           {frames.length > 0 ? Math.floor(playhead) + 1 : 0}/{frames.length}
         </span>
+
+        <div className="replay-team-tools">
+          <div className="speed-group" role="group" aria-label="Cor dos marcadores">
+            <button
+              className="button small"
+              data-active={settings.colorMode === "team"}
+              type="button"
+              onClick={() => setSettings({ ...settings, colorMode: "team" })}
+            >
+              Cor: Time
+            </button>
+            <button
+              className="button small"
+              data-active={settings.colorMode === "side"}
+              type="button"
+              onClick={() => setSettings({ ...settings, colorMode: "side" })}
+            >
+              Cor: Lado
+            </button>
+          </div>
+          <button className="button small" type="button" onClick={() => setShowTeamEditor((v) => !v)}>
+            {showTeamEditor ? "Fechar" : "Editar times"}
+          </button>
+        </div>
       </div>
+
+      {showTeamEditor ? (
+        <ReplayTeamEditor
+          settings={settings}
+          teamNames={teamNames}
+          hasTeams={hasTeams}
+          onChange={setSettings}
+        />
+      ) : null}
 
       <input
         className="replay-scrubber"
@@ -312,7 +417,29 @@ export function Replay2D({ matchId }: { matchId: string }) {
               <p className="replay-overlay-note">Sem frames para este round.</p>
             ) : (
               <>
-                {activeGrenades.map((grenade) => (
+                <svg
+                  className="replay-grenade-trails"
+                  viewBox={`0 0 ${imageWidth} ${imageHeight}`}
+                  preserveAspectRatio="none"
+                  aria-hidden="true"
+                >
+                  {flyingGrenades.map((grenade) => (
+                    <line
+                      key={`trail-${grenade.key}`}
+                      x1={grenade.ox ?? 0}
+                      y1={grenade.oy ?? 0}
+                      x2={grenade.lx ?? 0}
+                      y2={grenade.ly ?? 0}
+                      stroke={GRENADE_COLORS[grenade.type]}
+                      strokeWidth={5}
+                      strokeDasharray="10 9"
+                      strokeLinecap="round"
+                      opacity={0.75}
+                    />
+                  ))}
+                </svg>
+
+                {settledGrenades.map((grenade) => (
                   <span
                     className="replay-grenade"
                     data-type={grenade.type}
@@ -323,6 +450,19 @@ export function Replay2D({ matchId }: { matchId: string }) {
                       top: `${(grenade.top / imageHeight) * 100}%`
                     }}
                   />
+                ))}
+
+                {flyingGrenades.map((grenade) => (
+                  <span
+                    className="replay-grenade-icon"
+                    key={grenade.key}
+                    style={{
+                      left: `${(grenade.left / imageWidth) * 100}%`,
+                      top: `${(grenade.top / imageHeight) * 100}%`
+                    }}
+                  >
+                    <GrenadeIcon type={grenade.type} />
+                  </span>
                 ))}
 
                 {baseFrame?.events
@@ -343,63 +483,75 @@ export function Replay2D({ matchId }: { matchId: string }) {
 
                 {interpolatedPlayers
                   .filter((player) => player.alive)
-                  .map((player) => (
-                    <div
-                      className="replay-player"
-                      data-side={player.side}
-                      data-blinded={player.blinded ? "true" : undefined}
-                      key={player.steamId}
-                      style={{
-                        left: `${(player.radarX / imageWidth) * 100}%`,
-                        top: `${(player.radarY / imageHeight) * 100}%`
-                      }}
-                      title={`${player.name} · ${player.weapon} · ${player.hp} HP`}
-                    >
-                      {player.yaw !== null ? (
-                        <span
-                          className="replay-aim"
-                          style={{ transform: `translate(-50%, -100%) rotate(${-player.yaw}deg)` }}
-                        />
-                      ) : null}
-                      <span className="replay-dot" />
-                      <span className="replay-name">{shorten(player.name)}</span>
-                    </div>
-                  ))}
+                  .map((player) => {
+                    const color = resolveColor(
+                      player.side,
+                      teamKeyBySteam.get(player.steamId) ?? null,
+                      settings
+                    );
+                    return (
+                      <div
+                        className="replay-player"
+                        data-side={player.side}
+                        data-blinded={player.blinded ? "true" : undefined}
+                        key={player.steamId}
+                        style={{
+                          left: `${(player.radarX / imageWidth) * 100}%`,
+                          top: `${(player.radarY / imageHeight) * 100}%`,
+                          color
+                        }}
+                        title={`${player.name} · ${player.weapon} · ${player.hp} HP`}
+                      >
+                        {player.yaw !== null ? (
+                          <span
+                            className="replay-aim"
+                            // yaw é o ângulo do mundo (0=+X, anti-horário) e o radar
+                            // espelha o eixo Y; a linha aponta para "cima" em rotate(0),
+                            // então a rotação correta na tela é (90 - yaw). Verificado
+                            // contra ~200 kills (erro mediano ~0,4°).
+                            style={{ transform: `translate(-50%, -100%) rotate(${90 - player.yaw}deg)` }}
+                          />
+                        ) : null}
+                        <span className="replay-dot" />
+                        <span className="replay-name">{shorten(player.name)}</span>
+                      </div>
+                    );
+                  })}
               </>
             )}
           </div>
         </div>
 
         <aside className="replay-roster panel" aria-label="Jogadores">
-          {teams.map((team) => {
-            const roster = (baseFrame?.players ?? []).filter((player) => player.side === team.side);
-            return (
-              <div className="roster-team" data-side={team.side} key={team.side}>
-                <h3>{team.label}</h3>
-                {roster.length === 0 ? (
-                  <p className="state-note">—</p>
-                ) : (
-                  <ul className="roster-list">
-                    {roster.map((player) => (
-                      <li className="roster-row" data-alive={player.alive} key={player.steamId}>
-                        <div className="roster-main">
-                          <strong>{shorten(player.name)}</strong>
-                          <small>{player.weapon || "—"}</small>
-                        </div>
-                        <div className="hp-bar" aria-label={`${player.hp} HP`}>
-                          <span
-                            className="hp-fill"
-                            style={{ width: `${Math.max(0, Math.min(100, player.hp))}%` }}
-                          />
-                        </div>
-                        <span className="roster-hp">{player.alive ? player.hp : "☠"}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            );
-          })}
+          {rosterGroups.map((group) => (
+            <div className="roster-team" data-side={group.side} key={group.id}>
+              <h3 style={{ color: group.color }}>
+                {group.header}
+                {group.badge ? <small className="roster-side-badge"> · {group.badge}</small> : null}
+              </h3>
+              {group.members.length === 0 ? (
+                <p className="state-note">—</p>
+              ) : (
+                <ul className="roster-list">
+                  {group.members.map((player) => (
+                    <li className="roster-row" data-alive={player.alive} key={player.steamId}>
+                      <div className="roster-main">
+                        <strong>{shorten(player.name)}</strong>
+                        <small>{player.weapon || "—"}</small>
+                      </div>
+                      <div className="hp-bar" aria-label={`${player.hp} HP`}>
+                        <span
+                          className="hp-fill"
+                          style={{ width: `${Math.max(0, Math.min(100, player.hp))}%` }}
+                        />
+                      </div>
+                      <span className="roster-hp">{player.alive ? player.hp : "☠"}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ))}
         </aside>
       </section>
     </>

@@ -75,7 +75,10 @@ def parse_demo(
     """Parseia uma `.dem` com awpy e converte para o contrato interno."""
     factory = demo_factory or _default_demo_factory
     demo = factory(str(demo_path))
-    demo.parse()
+    # `player_props` é aditivo aos defaults do awpy (X/Y/Z/health/...). Sem pedir
+    # "yaw" explicitamente, o ângulo de mira sai nulo e o cone de visão (FOV) do
+    # replay não aparece. awpy usa demoparser2 por baixo, que expõe "yaw".
+    demo.parse(player_props=["yaw"])
 
     header = getattr(demo, "header", {}) or {}
     map_name = as_str(_header_value(header, "map_name", "map", "mapName"), "unknown") or "unknown"

@@ -85,6 +85,14 @@ export function useMatchRoundsQuery(matchId: string) {
   });
 }
 
+export function useMatchPlayersQuery(matchId: string) {
+  return useQuery({
+    queryKey: queryKeys.matchPlayers(matchId),
+    queryFn: () => api.getMatchPlayers(matchId),
+    enabled: matchId.length > 0
+  });
+}
+
 export function usePlayerStatsQuery(matchId: string) {
   return useQuery({
     queryKey: queryKeys.playerStats(matchId),

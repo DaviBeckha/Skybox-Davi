@@ -12,7 +12,13 @@ def build_matchups(match_id: str) -> dict[str, Any]:
     tables = read_tables(match_id, "players", "kills")
     matrix_counter: Counter[tuple[str, str]] = Counter()
     for kill in tables["kills"]:
-        matrix_counter[(kill["attacker_steam_id"], kill["victim_steam_id"])] += 1
+        attacker = kill["attacker_steam_id"]
+        victim = kill["victim_steam_id"]
+        # Mortes "do mundo" (bomba, queda, suicídio) vêm sem atacante: não são
+        # duelos entre jogadores e, com `None`, quebrariam o `sorted()` abaixo.
+        if attacker is None or victim is None:
+            continue
+        matrix_counter[(attacker, victim)] += 1
     return {
         "match_id": match_id,
         "players": [row["steam_id"] for row in tables["players"]],
