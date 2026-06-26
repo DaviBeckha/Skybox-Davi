@@ -20,7 +20,7 @@
 | 10 | Dashboard | 08, 09 | [x] |
 | 11 | Demos UI | 05, 09 | [x] |
 | 12 | Match Report | 08, 09 | [x] |
-| 13 | Replay 2D | 08, 09 | [ ] |
+| 13 | Replay 2D | 08, 09 | [x] |
 | 14 | Heatmaps | 08, 09 | [ ] |
 | 15 | Playbook privado | 09 | [ ] |
 | 16 | QA — aceite do MVP | todos | [ ] |
@@ -134,14 +134,14 @@
 - [x] Estados de loading/erro tratados.
 - [x] `npm run lint` e `npm run build` passam.
 
-## Phase 13 — Replay 2D
+## Phase 13 — Replay 2D ✅
 
-- [ ] O replay mostra o radar do mapa e os jogadores se movendo.
-- [ ] Cores por lado, yaw, vida e arma exibidos.
-- [ ] Timeline marca eventos: kills, bomb events e granadas/flashes (por `grenade_type`).
-- [ ] Seleção de round, play/pause e velocidades (0.25x–4x) funcionam.
-- [ ] Jogadores aparecem na posição correta sobre o radar (usando `radar_x/radar_y`).
-- [ ] `npm run lint` e `npm run build` passam.
+- [x] O replay mostra o radar do mapa e os jogadores se movendo.
+- [x] Cores por lado, yaw (ponteiro), vida e arma (roster) exibidos.
+- [x] Timeline marca eventos: kills, bomb events e granadas/flashes (por `grenade_type`).
+- [x] Seleção de round, play/pause e velocidades (0.25x–4x) funcionam.
+- [x] Jogadores aparecem na posição correta sobre o radar (usando `radar_x/radar_y`).
+- [x] `npm run lint` e `npm run build` passam. *(overlay DOM em vez de React-Konva, p/ evitar peer-deps React 19/SSR)*
 
 ## Phase 14 — Heatmaps
 

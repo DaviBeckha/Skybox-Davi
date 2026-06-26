@@ -802,6 +802,303 @@ h2 {
   font-size: 0.74rem;
 }
 
+/* Replay 2D */
+.replay-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.replay-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted-strong);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.replay-field select {
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--text);
+  padding: 8px 10px;
+}
+
+.speed-group {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.speed-group .button[data-active="true"] {
+  border-color: rgba(61, 214, 163, 0.5);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.replay-counter {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.replay-scrubber {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.replay-timeline {
+  position: relative;
+  height: 18px;
+  margin: 6px 0 16px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.08);
+}
+
+.timeline-mark {
+  position: absolute;
+  top: 3px;
+  width: 3px;
+  height: 12px;
+  border-radius: 2px;
+  background: var(--muted-strong);
+  transform: translateX(-50%);
+}
+
+.timeline-mark[data-type="kill"] {
+  background: var(--danger);
+}
+
+.timeline-mark[data-type="bomb_plant"],
+.timeline-mark[data-type="bomb_defuse"],
+.timeline-mark[data-type="bomb_explode"] {
+  background: #ffce86;
+}
+
+.timeline-mark[data-grenade="flash"] {
+  background: #f4e08a;
+}
+
+.timeline-mark[data-grenade="smoke"] {
+  background: #c3ccda;
+}
+
+.timeline-mark[data-grenade="molotov"],
+.timeline-mark[data-grenade="incendiary"] {
+  background: #ff8c5a;
+}
+
+.timeline-mark[data-grenade="he"] {
+  background: #ff6b7a;
+}
+
+.timeline-cursor {
+  position: absolute;
+  top: -2px;
+  width: 2px;
+  height: 22px;
+  background: var(--accent-strong);
+  transform: translateX(-50%);
+}
+
+.replay-stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 16px;
+}
+
+.replay-canvas-wrap {
+  padding: 12px;
+}
+
+.replay-canvas {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background-color: #05070d;
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+.replay-overlay-note {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  margin: 0;
+  color: var(--muted-strong);
+  transform: translate(-50%, -50%);
+}
+
+.replay-player {
+  position: absolute;
+  color: #a8c5ff;
+  transform: translate(-50%, -50%);
+}
+
+.replay-player[data-side="T"] {
+  color: #ffce86;
+}
+
+.replay-player[data-side="CT"] {
+  color: #a8c5ff;
+}
+
+.replay-dot {
+  display: block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(7, 10, 18, 0.8);
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.replay-aim {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-bottom: 12px solid currentColor;
+  transform-origin: 50% 100%;
+  opacity: 0.85;
+}
+
+.replay-name {
+  position: absolute;
+  top: 13px;
+  left: 50%;
+  color: var(--text);
+  font-size: 0.62rem;
+  white-space: nowrap;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+  transform: translateX(-50%);
+}
+
+.replay-event {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border: 1px solid rgba(7, 10, 18, 0.9);
+  border-radius: 2px;
+  background: var(--muted-strong);
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.replay-event[data-type="kill"] {
+  background: var(--danger);
+}
+
+.replay-event[data-grenade="flash"] {
+  background: #f4e08a;
+}
+
+.replay-event[data-grenade="smoke"] {
+  background: #c3ccda;
+}
+
+.replay-event[data-grenade="molotov"],
+.replay-event[data-grenade="incendiary"] {
+  background: #ff8c5a;
+}
+
+.replay-event[data-grenade="he"] {
+  background: #ff6b7a;
+}
+
+.replay-roster {
+  display: grid;
+  align-content: start;
+  gap: 16px;
+  padding: 16px;
+}
+
+.roster-team h3 {
+  margin: 0 0 8px;
+  font-size: 0.82rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.roster-team[data-side="T"] h3 {
+  color: #ffce86;
+}
+
+.roster-team[data-side="CT"] h3 {
+  color: #a8c5ff;
+}
+
+.roster-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.roster-row {
+  display: grid;
+  grid-template-columns: 1fr 60px auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.roster-row[data-alive="false"] {
+  opacity: 0.45;
+}
+
+.roster-main {
+  display: grid;
+  min-width: 0;
+}
+
+.roster-main strong {
+  overflow: hidden;
+  font-size: 0.82rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.roster-main small {
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+
+.hp-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.16);
+}
+
+.hp-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+.roster-hp {
+  color: var(--muted-strong);
+  font-size: 0.76rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+@media (max-width: 980px) {
+  .replay-stage {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 980px) {
   .app-shell {
     grid-template-columns: 1fr;

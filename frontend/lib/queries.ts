@@ -114,6 +114,22 @@ export function useBombsiteStatsQuery(matchId: string) {
   });
 }
 
+export function useReplayQuery(matchId: string, round: number, sampleRate: number) {
+  return useQuery({
+    queryKey: ["matches", matchId, "replay", round, sampleRate] as const,
+    queryFn: () => api.getReplay(matchId, { round, sampleRate }),
+    enabled: matchId.length > 0 && round > 0
+  });
+}
+
+export function useMapMetadataQuery(mapName: string) {
+  return useQuery({
+    queryKey: queryKeys.mapMetadata(mapName),
+    queryFn: () => api.getMapMetadata(mapName),
+    enabled: mapName.length > 0
+  });
+}
+
 export function useMapsQuery() {
   return useQuery({
     queryKey: queryKeys.maps,
