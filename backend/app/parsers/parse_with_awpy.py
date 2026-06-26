@@ -117,6 +117,7 @@ def parse_demo(
     # --- ticks (X/Y/Z, side, round_num; sem yaw/armor/weapon/alive no awpy) ---
     side_by_round_steam: dict[tuple[int, str], str] = {}
     side_by_steam: dict[str, str] = {}
+    team_name_by_steam: dict[str, str] = {}
     for row in records(getattr(demo, "ticks", None)):
         rn = round_number(row)
         steam = clean_steam(value(row, "steamid", "steam_id"))
@@ -125,6 +126,9 @@ def parse_demo(
         if steam and side:
             side_by_round_steam[(rn, steam)] = side
             side_by_steam.setdefault(steam, side)
+        clan = as_str(value(row, "team_clan_name", "team_name", "clan_name"))
+        if steam and clan and steam not in team_name_by_steam:
+            team_name_by_steam[steam] = clan
         append_canonical(
             tables,
             "ticks",
@@ -151,6 +155,45 @@ def parse_demo(
         if not steam:
             return ""
         return side_by_round_steam.get((rn, steam)) or side_by_steam.get(steam, "")
+
+    # --- times fixos por roster + troca de lado por round ---
+    # Os times são conjuntos fixos de jogadores; o LADO (T/CT) troca no intervalo.
+    # Contar o placar por lado dá totais impossíveis (ex.: 18 num MR12); por isso
+    # derivamos, round a round, qual time está em cada lado a partir dos ticks.
+    rounds_seen = sorted({rn for (rn, _steam) in side_by_round_steam})
+    first_round = rounds_seen[0] if rounds_seen else 1
+    first_sides = {
+        steam: side
+        for (rn, steam), side in side_by_round_steam.items()
+        if rn == first_round
+    }
+    team_t_roster = {s for s, side in first_sides.items() if side == "T"}
+    team_ct_roster = {s for s, side in first_sides.items() if side == "CT"}
+
+    def _team_label(roster: set[str], fallback: str) -> str:
+        for steam in roster:
+            name = team_name_by_steam.get(steam)
+            if name:
+                return name
+        return fallback
+
+    team_a = _team_label(team_t_roster, team_a)  # time que começou no lado T
+    team_b = _team_label(team_ct_roster, team_b)  # time que começou no lado CT
+
+    def _round_teams(rn: int) -> tuple[str, str]:
+        """(t_team, ct_team) do round, pelo lado majoritário do roster que começou T."""
+        t_votes = sum(1 for s in team_t_roster if side_by_round_steam.get((rn, s)) == "T")
+        ct_votes = sum(1 for s in team_t_roster if side_by_round_steam.get((rn, s)) == "CT")
+        if t_votes == 0 and ct_votes == 0:
+            a_on_t = ((rn - first_round) // 12) % 2 == 0  # fallback: troca a cada 12
+        else:
+            a_on_t = t_votes >= ct_votes
+        return (team_a, team_b) if a_on_t else (team_b, team_a)
+
+    for round_row in tables["rounds"]:
+        t_label, ct_label = _round_teams(round_row["round_number"])
+        round_row["t_team"] = t_label
+        round_row["ct_team"] = ct_label
 
     # --- kills (com posições e side) ---
     for row in records(getattr(demo, "kills", None)):
