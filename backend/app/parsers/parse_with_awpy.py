@@ -331,6 +331,26 @@ def _supplement_utility(
         )
         tables["grenades"] = utility["grenades"]
         tables["blinds"] = utility["blinds"]
+
+        # Os eventos do demoparser2 não trazem o round → todos cairiam no round 1.
+        # Remapeia pelo tick: round = o último cujo start_tick <= tick do evento.
+        starts = sorted(
+            ((r.get("start_tick") or 0), r["round_number"]) for r in tables.get("rounds", [])
+        )
+
+        def _round_of(tick: int | None) -> int:
+            current = starts[0][1] if starts else 1
+            for start, number in starts:
+                if start <= (tick or 0):
+                    current = number
+                else:
+                    break
+            return current
+
+        for row in tables["grenades"]:
+            row["round_number"] = _round_of(row.get("tick"))
+        for row in tables["blinds"]:
+            row["round_number"] = _round_of(row.get("tick"))
     except (KeyboardInterrupt, SystemExit):
         raise
     except BaseException as exc:  # noqa: BLE001 - utility é best-effort

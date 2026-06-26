@@ -1142,11 +1142,85 @@ h2 {
   top: 50%;
   width: 0;
   height: 0;
-  border-left: 4px solid transparent;
-  border-right: 4px solid transparent;
-  border-bottom: 12px solid currentColor;
+  border-left: 11px solid transparent;
+  border-right: 11px solid transparent;
+  border-bottom: 30px solid currentColor;
   transform-origin: 50% 100%;
-  opacity: 0.85;
+  opacity: 0.22;
+  pointer-events: none;
+}
+
+.replay-player[data-blinded="true"] .replay-dot {
+  background: #fff;
+  box-shadow: 0 0 9px 3px rgba(255, 255, 255, 0.9);
+}
+
+.replay-player[data-blinded="true"] .replay-aim {
+  opacity: 0.08;
+}
+
+.replay-grenade {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+.replay-grenade[data-state="flying"] {
+  width: 8px;
+  height: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.6);
+  background: #d8dee9;
+}
+
+.replay-grenade[data-state="flying"][data-type="he"] {
+  background: #ff6b7a;
+}
+
+.replay-grenade[data-state="flying"][data-type="flash"] {
+  background: #f4e08a;
+}
+
+.replay-grenade[data-state="flying"][data-type="smoke"] {
+  background: #c3ccda;
+}
+
+.replay-grenade[data-state="flying"][data-type="molotov"],
+.replay-grenade[data-state="flying"][data-type="incendiary"] {
+  background: #ff8c5a;
+}
+
+.replay-grenade[data-state="active"][data-type="smoke"] {
+  width: 9%;
+  aspect-ratio: 1;
+  border: 1px solid rgba(210, 218, 228, 0.4);
+  background: radial-gradient(circle, rgba(210, 218, 228, 0.55), rgba(210, 218, 228, 0.12) 70%, transparent);
+}
+
+.replay-grenade[data-state="active"][data-type="molotov"],
+.replay-grenade[data-state="active"][data-type="incendiary"] {
+  width: 7%;
+  aspect-ratio: 1;
+  border: 1px solid rgba(255, 140, 90, 0.5);
+  background: radial-gradient(circle, rgba(255, 140, 90, 0.6), rgba(255, 90, 40, 0.18) 70%, transparent);
+}
+
+.replay-grenade[data-state="active"][data-type="decoy"] {
+  width: 14px;
+  height: 14px;
+  border: 1px dashed rgba(148, 163, 184, 0.7);
+}
+
+.replay-grenade[data-state="burst"][data-type="flash"] {
+  width: 6%;
+  aspect-ratio: 1;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.92), transparent 70%);
+}
+
+.replay-grenade[data-state="burst"][data-type="he"] {
+  width: 4%;
+  aspect-ratio: 1;
+  background: radial-gradient(circle, rgba(255, 107, 122, 0.85), transparent 70%);
 }
 
 .replay-name {

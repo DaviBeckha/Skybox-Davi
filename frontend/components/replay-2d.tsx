@@ -129,6 +129,48 @@ export function Replay2D({ matchId }: { matchId: string }) {
     });
   }, [baseFrame, nextFrame, t]);
 
+  const grenades = useMemo(() => replayQuery.data?.grenades ?? [], [replayQuery.data]);
+  const currentTick = baseFrame
+    ? baseFrame.tick + (nextFrame ? (nextFrame.tick - baseFrame.tick) * t : 0)
+    : 0;
+  const burstWindow = 0.4 * (tickRate || 64);
+
+  const activeGrenades = useMemo(() => {
+    const out: Array<{ key: string; type: string; state: string; left: number; top: number }> = [];
+    grenades.forEach((g, index) => {
+      const hasEnd = g.radarX !== null && g.radarY !== null;
+      if (
+        g.thrownTick !== null &&
+        g.startRadarX !== null &&
+        g.startRadarY !== null &&
+        hasEnd &&
+        currentTick >= g.thrownTick &&
+        currentTick <= g.detonateTick &&
+        g.detonateTick > g.thrownTick
+      ) {
+        const f = (currentTick - g.thrownTick) / (g.detonateTick - g.thrownTick);
+        out.push({
+          key: `fly-${index}`,
+          type: g.type,
+          state: "flying",
+          left: lerp(g.startRadarX, g.radarX as number, f),
+          top: lerp(g.startRadarY, g.radarY as number, f)
+        });
+      }
+      if (!hasEnd) {
+        return;
+      }
+      const isArea = ["smoke", "molotov", "incendiary", "decoy"].includes(g.type);
+      if (isArea && currentTick >= g.detonateTick && currentTick <= g.expireTick) {
+        out.push({ key: `area-${index}`, type: g.type, state: "active", left: g.radarX as number, top: g.radarY as number });
+      }
+      if ((g.type === "flash" || g.type === "he") && Math.abs(currentTick - g.detonateTick) <= burstWindow) {
+        out.push({ key: `burst-${index}`, type: g.type, state: "burst", left: g.radarX as number, top: g.radarY as number });
+      }
+    });
+    return out;
+  }, [grenades, currentTick, burstWindow]);
+
   const timelineEvents = useMemo(() => {
     if (frames.length === 0) {
       return [];
@@ -270,6 +312,19 @@ export function Replay2D({ matchId }: { matchId: string }) {
               <p className="replay-overlay-note">Sem frames para este round.</p>
             ) : (
               <>
+                {activeGrenades.map((grenade) => (
+                  <span
+                    className="replay-grenade"
+                    data-type={grenade.type}
+                    data-state={grenade.state}
+                    key={grenade.key}
+                    style={{
+                      left: `${(grenade.left / imageWidth) * 100}%`,
+                      top: `${(grenade.top / imageHeight) * 100}%`
+                    }}
+                  />
+                ))}
+
                 {baseFrame?.events
                   .filter((event) => event.radarX !== null && event.radarY !== null)
                   .map((event, index) => (
@@ -292,6 +347,7 @@ export function Replay2D({ matchId }: { matchId: string }) {
                     <div
                       className="replay-player"
                       data-side={player.side}
+                      data-blinded={player.blinded ? "true" : undefined}
                       key={player.steamId}
                       style={{
                         left: `${(player.radarX / imageWidth) * 100}%`,

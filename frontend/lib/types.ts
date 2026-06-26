@@ -77,6 +77,19 @@ export type ReplayPlayer = {
   weapon: string;
   yaw: number | null;
   alive: boolean;
+  blinded: boolean;
+};
+
+export type ReplayGrenade = {
+  type: GrenadeType;
+  throwerSteamId: string | null;
+  thrownTick: number | null;
+  detonateTick: number;
+  expireTick: number;
+  startRadarX: number | null;
+  startRadarY: number | null;
+  radarX: number | null;
+  radarY: number | null;
 };
 
 export type ReplayEvent = {
@@ -102,6 +115,7 @@ export type ReplayPayload = {
   round: number;
   tickRate: number | null;
   frames: ReplayFrame[];
+  grenades: ReplayGrenade[];
 };
 
 export type HeatmapPoint = {
