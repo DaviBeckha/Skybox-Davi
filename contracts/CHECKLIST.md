@@ -21,7 +21,7 @@
 | 11 | Demos UI | 05, 09 | [x] |
 | 12 | Match Report | 08, 09 | [x] |
 | 13 | Replay 2D | 08, 09 | [x] |
-| 14 | Heatmaps | 08, 09 | [ ] |
+| 14 | Heatmaps | 08, 09 | [x] |
 | 15 | Playbook privado | 09 | [ ] |
 | 16 | QA — aceite do MVP | todos | [ ] |
 
@@ -143,15 +143,15 @@
 - [x] Jogadores aparecem na posição correta sobre o radar (usando `radar_x/radar_y`).
 - [x] `npm run lint` e `npm run build` passam. *(overlay DOM em vez de React-Konva, p/ evitar peer-deps React 19/SSR)*
 
-## Phase 14 — Heatmaps
+## Phase 14 — Heatmaps ✅
 
-- [ ] É possível ver ao menos um heatmap básico (ex.: kills) sobre o radar.
-- [ ] Os tipos (kills/deaths/pathing/utility/grenades) são selecionáveis.
-- [ ] Mapa de movimento de um player (`path` + filtro player) renderiza.
-- [ ] Posição de morte do player mostra todas as mortes e destaca o `top_spot`.
-- [ ] Filtros básicos (player/team/side/round range/grenade type) afetam o resultado.
-- [ ] Pontos posicionados corretamente via `radar_x/radar_y`.
-- [ ] `npm run lint` e `npm run build` passam.
+- [x] É possível ver ao menos um heatmap básico (ex.: kills) sobre o radar.
+- [x] Os tipos (kills/deaths/pathing/utility/grenades) são selecionáveis.
+- [x] Mapa de movimento de um player (`path` + filtro player) renderiza.
+- [x] Posição de morte do player mostra todas as mortes e destaca o `top_spot`.
+- [x] Filtros básicos (player/team/side/round range/grenade type) afetam o resultado.
+- [x] Pontos posicionados corretamente via `radar_x/radar_y`.
+- [x] `npm run lint` e `npm run build` passam.
 
 ## Phase 15 — Playbook privado
 

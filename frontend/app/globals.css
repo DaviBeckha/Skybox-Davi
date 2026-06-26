@@ -1099,6 +1099,83 @@ h2 {
   }
 }
 
+/* Heatmaps */
+.heat-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 16px;
+}
+
+.heat-filters .replay-field {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.heat-filters select,
+.heat-filters input {
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--text);
+  padding: 8px 10px;
+}
+
+.heat-point {
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 107, 122, 0.7), rgba(255, 107, 122, 0) 70%);
+  mix-blend-mode: screen;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+.heat-point[data-type="kills"] {
+  background: radial-gradient(circle, rgba(255, 107, 122, 0.7), rgba(255, 107, 122, 0) 70%);
+}
+
+.heat-point[data-type="deaths"] {
+  background: radial-gradient(circle, rgba(255, 184, 92, 0.7), rgba(255, 184, 92, 0) 70%);
+}
+
+.heat-point[data-type="path"] {
+  width: 16px;
+  height: 16px;
+  background: radial-gradient(circle, rgba(61, 214, 163, 0.6), rgba(61, 214, 163, 0) 70%);
+}
+
+.heat-point[data-type="utility"],
+.heat-point[data-type="grenades"] {
+  background: radial-gradient(circle, rgba(110, 168, 255, 0.65), rgba(110, 168, 255, 0) 70%);
+}
+
+.heat-topspot {
+  position: absolute;
+  display: grid;
+  width: 46px;
+  height: 46px;
+  place-items: center;
+  border: 2px solid var(--accent-strong);
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px rgba(61, 214, 163, 0.25);
+  transform: translate(-50%, -50%);
+}
+
+.heat-topspot small {
+  position: absolute;
+  top: -20px;
+  color: var(--accent-strong);
+  font-size: 0.66rem;
+  font-weight: 700;
+  white-space: nowrap;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+}
+
 @media (max-width: 980px) {
   .app-shell {
     grid-template-columns: 1fr;

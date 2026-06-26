@@ -3,6 +3,17 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { api } from "./api";
+import type { HeatmapType } from "./types";
+
+type HeatmapParams = {
+  type: HeatmapType;
+  player?: string;
+  team?: string;
+  side?: string;
+  roundRange?: string;
+  weapon?: string;
+  grenadeType?: string;
+};
 
 export const queryKeys = {
   health: ["health"] as const,
@@ -119,6 +130,22 @@ export function useReplayQuery(matchId: string, round: number, sampleRate: numbe
     queryKey: ["matches", matchId, "replay", round, sampleRate] as const,
     queryFn: () => api.getReplay(matchId, { round, sampleRate }),
     enabled: matchId.length > 0 && round > 0
+  });
+}
+
+export function useHeatmapQuery(matchId: string, params: HeatmapParams, enabled: boolean) {
+  return useQuery({
+    queryKey: ["matches", matchId, "heatmap", params] as const,
+    queryFn: () => api.getHeatmap(matchId, params),
+    enabled: enabled && matchId.length > 0
+  });
+}
+
+export function useDeathPositionsQuery(matchId: string, player: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ["matches", matchId, "death-positions", player] as const,
+    queryFn: () => api.getDeathPositions(matchId, player),
+    enabled: enabled && matchId.length > 0 && player.length > 0
   });
 }
 
