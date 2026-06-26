@@ -23,4 +23,15 @@ data/       raw_demos, processed (parquet/duckdb), maps
 docs/       audit, research, architecture
 ```
 
+## Assets de mapa (radares)
+
+Os overviews dos mapas (imagens de radar) **não são versionados** (são assets da Valve). Para baixá-los dos arquivos oficiais do CS2 (via `awpy`) e popular `data/maps/`:
+
+```bash
+cd backend
+uv run python -m scripts.fetch_map_assets
+```
+
+Sem isso, a API serve um placeholder do tamanho correto — os pontos e jogadores ainda aparecem na posição certa sobre o radar.
+
 Veja o índice de execução em [`contracts/00-indice.md`](contracts/00-indice.md) e o progresso em [`contracts/CHECKLIST.md`](contracts/CHECKLIST.md).
