@@ -904,6 +904,68 @@ h2 {
   font-weight: 700;
 }
 
+.duel-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.duel-field {
+  display: grid;
+  gap: 6px;
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
+  color: var(--muted-strong);
+}
+
+.duel-totals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: baseline;
+}
+
+.duel-kpi {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.duel-kpi strong {
+  margin-right: 4px;
+  font-size: 1.05rem;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.duel-kpi[data-pos="true"] strong {
+  color: #34d399;
+}
+
+.duel-kpi[data-pos="false"] strong {
+  color: var(--danger);
+}
+
+.duel-table td,
+.duel-table thead th:not(:first-child) {
+  text-align: center;
+}
+
+.duel-diff {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.duel-diff[data-pos="true"] {
+  color: #34d399;
+}
+
+.duel-diff[data-pos="false"] {
+  color: var(--danger);
+}
+
 .bar-chart {
   display: grid;
   gap: 8px;
