@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     api_title: str = "cs2-lab API"
     log_level: str = "INFO"
+    # Origens liberadas para o frontend local (Next.js em :3000).
+    cors_origins: list[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
 
 
 settings = Settings()
