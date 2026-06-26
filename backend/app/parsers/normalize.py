@@ -80,6 +80,50 @@ def side_is_enemy(left: str | None, right: str | None) -> bool:
     return left in {"CT", "T"} and right in {"CT", "T"} and left != right
 
 
+def as_side(raw: Any) -> str:
+    """Normaliza um lado para `CT`/`T` (aceita minúsculas/variações); senão ``""``."""
+    text = (as_str(raw, "") or "").strip().upper()
+    if text in {"CT", "T"}:
+        return text
+    if text in {"COUNTER-TERRORIST", "COUNTERTERRORIST", "CTS"}:
+        return "CT"
+    if text in {"TERRORIST", "TERRORISTS", "TS"}:
+        return "T"
+    return ""
+
+
+def as_winner(raw: Any) -> str:
+    """Normaliza o vencedor do round para `CT`/`T` (aceita `ct`/`t`); senão ``""``."""
+    text = (as_str(raw, "") or "").strip().upper()
+    if text in {"CT", "T"}:
+        return text
+    if "CT" in text:
+        return "CT"
+    if text.startswith("T"):
+        return "T"
+    return ""
+
+
+def as_bomb_site(raw: Any) -> str | None:
+    """Normaliza o bombsite para `A`/`B`/None (mapeia `not_planted`, `BombsiteA`, etc.)."""
+    text = (as_str(raw, "") or "").strip().upper()
+    if not text or text in {"NOT_PLANTED", "NONE", "NULL"}:
+        return None
+    if text.endswith("A") or text == "A":
+        return "A"
+    if text.endswith("B") or text == "B":
+        return "B"
+    return text
+
+
+def clean_steam(raw: Any) -> str | None:
+    """steamID64 como string, ou None quando ausente/zero."""
+    text = as_str(raw)
+    if text is None or text in {"", "0"}:
+        return None
+    return text
+
+
 def empty_tables() -> dict[str, list[dict]]:
     return {table: [] for table in PARQUET_SCHEMAS}
 

@@ -1,4 +1,10 @@
-"""Phase 07: adapter awpy -> schema canônico do cs2-lab."""
+"""Phase 07: adapter awpy -> schema canônico do cs2-lab.
+
+Usa os **nomes de coluna reais** do awpy (round_num, attacker_steamid,
+attacker_X, winner minúsculo, bombsite='BombsiteA'/'not_planted', side='t'/'ct')
+para validar o mapeamento de verdade. Granadas/flashes vêm do demoparser2
+(híbrido) — aqui o supplement é stubado.
+"""
 
 from __future__ import annotations
 
@@ -13,64 +19,56 @@ from app.parsers.schema import PARQUET_SCHEMAS
 
 class _FakeAwpyDemo:
     def __init__(self, _path: str) -> None:
-        self.header = {
-            "map_name": "de_mirage",
-            "tick_rate": 64,
-            "team_a": "Team A",
-            "team_b": "Team B",
-        }
+        # Header real do awpy só traz map_name (sem times/tick_rate).
+        self.header = {"map_name": "de_mirage"}
 
     def parse(self) -> None:
         self.rounds = pl.DataFrame(
             [
                 {
-                    "round_number": 1,
-                    "winner": "T",
+                    "round_num": 1,
+                    "start": 1000,
+                    "freeze_end": 1500,
+                    "end": 5000,
+                    "official_end": 5400,
+                    "winner": "t",  # minúsculo no awpy
                     "reason": "bomb",
-                    "start_tick": 1000,
-                    "end_tick": 5000,
-                    "bomb_planted": True,
-                    "bomb_site": "A",
-                    "plant_tick": 3000,
-                    "defuse_tick": None,
-                    "t_team": "Team A",
-                    "ct_team": "Team B",
+                    "bomb_plant": 3000,
+                    "bomb_site": "BombsiteA",
                 }
             ]
         )
         self.kills = pl.DataFrame(
             [
                 {
-                    "round_number": 1,
+                    "round_num": 1,
                     "tick": 3500,
-                    "time": 39.0625,
-                    "attacker_steam_id": "76561198000000001",
-                    "victim_steam_id": "76561198000000002",
-                    "assister_steam_id": None,
+                    "attacker_steamid": "76561198000000001",
+                    "victim_steamid": "76561198000000002",
+                    "assister_steamid": None,
                     "weapon": "ak47",
                     "headshot": True,
-                    "attacker_side": "T",
-                    "victim_side": "CT",
-                    "attacker_x": 10.0,
-                    "attacker_y": 20.0,
-                    "attacker_z": 0.0,
-                    "victim_x": 30.0,
-                    "victim_y": 40.0,
-                    "victim_z": 0.0,
+                    "attacker_side": "t",
+                    "victim_side": "ct",
+                    "attacker_X": 10.0,
+                    "attacker_Y": 20.0,
+                    "attacker_Z": 0.0,
+                    "victim_X": 30.0,
+                    "victim_Y": 40.0,
+                    "victim_Z": 0.0,
                 }
             ]
         )
         self.damages = pl.DataFrame(
             [
                 {
-                    "round_number": 1,
+                    "round_num": 1,
                     "tick": 3400,
-                    "time": 37.5,
-                    "attacker_steam_id": "76561198000000001",
-                    "victim_steam_id": "76561198000000002",
+                    "attacker_steamid": "76561198000000001",
+                    "victim_steamid": "76561198000000002",
                     "weapon": "ak47",
-                    "hp_damage": 100,
-                    "armor_damage": 12,
+                    "dmg_health": 100,
+                    "dmg_armor": 12,
                     "hitgroup": "head",
                 }
             ]
@@ -78,106 +76,105 @@ class _FakeAwpyDemo:
         self.shots = pl.DataFrame(
             [
                 {
-                    "round_number": 1,
+                    "round_num": 1,
                     "tick": 3300,
-                    "time": 35.9375,
-                    "steam_id": "76561198000000001",
+                    "player_steamid": "76561198000000001",
+                    "player_side": "t",
                     "weapon": "ak47",
-                    "x": 10.0,
-                    "y": 20.0,
-                    "z": 0.0,
+                    "player_X": 10.0,
+                    "player_Y": 20.0,
+                    "player_Z": 0.0,
                 }
             ]
         )
         self.bomb = pl.DataFrame(
             [
                 {
-                    "round_number": 1,
+                    "round_num": 1,
                     "tick": 3000,
-                    "time": 31.25,
-                    "event": "plant",
-                    "steam_id": "76561198000000001",
-                    "site": "A",
-                    "x": 50.0,
-                    "y": 60.0,
-                    "z": 0.0,
-                }
-            ]
-        )
-        self.grenades = pl.DataFrame(
-            [
-                {
-                    "round_number": 1,
-                    "tick": 2600,
-                    "time": 25.0,
-                    "thrower_steam_id": "76561198000000001",
-                    "thrower_side": "T",
-                    "grenade_type": "flash",
-                    "event": "detonate",
-                    "x": 12.0,
-                    "y": 22.0,
-                    "z": 0.0,
-                    "entity_id": 7,
-                }
-            ]
-        )
-        self.blinds = pl.DataFrame(
-            [
-                {
-                    "round_number": 1,
-                    "tick": 2620,
-                    "time": 25.3125,
-                    "flasher_steam_id": "76561198000000001",
-                    "victim_steam_id": "76561198000000002",
-                    "flasher_side": "T",
-                    "victim_side": "CT",
-                    "is_enemy": True,
-                    "duration": 2.1,
-                    "entity_id": 7,
+                    "event": "planted",  # _bomb_event -> "plant"
+                    "steamid": "76561198000000001",
+                    "name": "alpha",
+                    "bombsite": "BombsiteA",
+                    "X": 50.0,
+                    "Y": 60.0,
+                    "Z": 0.0,
                 }
             ]
         )
         self.ticks = pl.DataFrame(
             [
                 {
-                    "round_number": 1,
+                    "round_num": 1,
                     "tick": 2400,
-                    "time": 21.875,
-                    "steam_id": "76561198000000001",
+                    "steamid": "76561198000000001",
                     "name": "alpha",
-                    "side": "T",
-                    "team": "Team A",
-                    "x": 9.0,
-                    "y": 19.0,
-                    "z": 0.0,
-                    "yaw": 90.0,
-                    "hp": 100,
-                    "armor": 100,
-                    "weapon": "ak47",
-                    "alive": True,
+                    "side": "t",
+                    "place": "A site",
+                    "health": 100,
+                    "X": 9.0,
+                    "Y": 19.0,
+                    "Z": 0.0,
                 },
                 {
-                    "round_number": 1,
+                    "round_num": 1,
                     "tick": 2400,
-                    "time": 21.875,
-                    "steam_id": "76561198000000002",
+                    "steamid": "76561198000000002",
                     "name": "bravo",
-                    "side": "CT",
-                    "team": "Team B",
-                    "x": 29.0,
-                    "y": 39.0,
-                    "z": 0.0,
-                    "yaw": 270.0,
-                    "hp": 100,
-                    "armor": 100,
-                    "weapon": "m4a1",
-                    "alive": True,
+                    "side": "ct",
+                    "place": "A site",
+                    "health": 100,
+                    "X": 29.0,
+                    "Y": 39.0,
+                    "Z": 0.0,
                 },
             ]
         )
 
 
-def test_awpy_adapter_maps_demo_frames_to_contract_schema() -> None:
+def _fake_utility(demo_path, *, match_id, tick_rate, side_of, round_start_of):
+    # Verifica que o side_of resolve o lado a partir dos ticks do awpy.
+    flasher_side = side_of(1, "76561198000000001")
+    victim_side = side_of(1, "76561198000000002")
+    return {
+        "grenades": [
+            {
+                "match_id": match_id,
+                "round_number": 1,
+                "tick": 2600,
+                "time": 17.1875,
+                "thrower_steam_id": "76561198000000001",
+                "thrower_side": flasher_side,
+                "grenade_type": "flash",
+                "event": "thrown",
+                "x": None,
+                "y": None,
+                "z": None,
+                "entity_id": None,
+            }
+        ],
+        "blinds": [
+            {
+                "match_id": match_id,
+                "round_number": 1,
+                "tick": 2620,
+                "time": 17.5,
+                "flasher_steam_id": "76561198000000001",
+                "victim_steam_id": "76561198000000002",
+                "flasher_side": flasher_side,
+                "victim_side": victim_side,
+                "is_enemy": flasher_side != victim_side,
+                "duration": 2.1,
+                "entity_id": 7,
+            }
+        ],
+    }
+
+
+def test_awpy_adapter_maps_real_columns_to_contract_schema(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "app.parsers.parse_with_demoparser2.extract_utility_events", _fake_utility
+    )
     match_id = str(uuid.uuid4())
 
     parsed = parse_demo(
@@ -188,20 +185,42 @@ def test_awpy_adapter_maps_demo_frames_to_contract_schema() -> None:
 
     assert parsed.match.map == "de_mirage"
     assert parsed.match.team_a == "Team A"
-    assert parsed.match.team_b == "Team B"
     assert parsed.match.tick_rate == 64
-    assert [p.steam_id for p in parsed.match.players] == [
-        "76561198000000001",
-        "76561198000000002",
-    ]
-    assert parsed.tables["rounds"][0]["bomb_site"] == "A"
-    assert parsed.tables["rounds"][0]["t_team"] == "Team A"
-    assert parsed.tables["rounds"][0]["ct_team"] == "Team B"
-    assert parsed.tables["shots"][0]["weapon"] == "ak47"
+
+    # winner minúsculo do awpy normalizado para maiúsculo.
+    round_row = parsed.tables["rounds"][0]
+    assert round_row["winner"] == "T"
+    assert round_row["bomb_planted"] is True
+    assert round_row["bomb_site"] == "A"
+    assert round_row["plant_tick"] == 3000
+
+    # kills: posições e side a partir das colunas reais.
+    kill = parsed.tables["kills"][0]
+    assert kill["attacker_steam_id"] == "76561198000000001"
+    assert kill["attacker_side"] == "T"
+    assert kill["victim_side"] == "CT"
+    assert kill["attacker_x"] == 10.0
+
+    assert parsed.tables["damages"][0]["hp_damage"] == 100
+    assert parsed.tables["shots"][0]["steam_id"] == "76561198000000001"
+
+    bomb = parsed.tables["bomb_events"][0]
+    assert bomb["event"] == "plant"
+    assert bomb["site"] == "A"
+    assert bomb["steam_id"] == "76561198000000001"
+
+    tick_row = parsed.tables["ticks"][0]
+    assert tick_row["side"] in {"T", "CT"}
+    assert tick_row["x"] == 9.0
+
+    # granadas/flashes vêm do supplement (demoparser2); side resolvido via ticks.
     assert parsed.tables["grenades"][0]["grenade_type"] == "flash"
     assert parsed.tables["blinds"][0]["is_enemy"] is True
-    assert parsed.tables["replay_frames"] == parsed.tables["ticks"]
+    assert parsed.tables["blinds"][0]["flasher_side"] == "T"
 
-    for table, schema in PARQUET_SCHEMAS.items():
-        assert set(parsed.tables[table][0]) == set(schema) if parsed.tables[table] else True
-        assert all("radar_x" not in row and "radar_y" not in row for row in parsed.tables[table])
+    # replay_frames é downsample de ticks; nenhuma tabela carrega radar_x/radar_y.
+    assert parsed.tables["replay_frames"]
+    for table in PARQUET_SCHEMAS:
+        assert all("radar_x" not in row for row in parsed.tables[table])
+        if parsed.tables[table]:
+            assert set(parsed.tables[table][0]) == set(PARQUET_SCHEMAS[table])

@@ -90,7 +90,9 @@ def parse_demo_job(demo_id: str) -> str:
             session.commit()
             logger.info("Parsing concluido (parsed) para demo %s", demo_id)
             return "parsed"
-        except Exception as exc:  # noqa: BLE001
+        except (KeyboardInterrupt, SystemExit):
+            raise
+        except BaseException as exc:  # noqa: BLE001 - inclui PanicException (pyo3)
             session.rollback()
             demo = session.get(Demo, uuid.UUID(demo_id))
             if demo is not None:

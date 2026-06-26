@@ -1,26 +1,36 @@
-"""Adapter awpy -> `ParsedDemo` canônico do cs2-lab."""
+"""Adapter awpy -> `ParsedDemo` canônico do cs2-lab.
+
+awpy fornece as tabelas estruturadas (rounds com winner, kills/damages/shots com
+posições e side, ticks com side/round). Não expõe eventos discretos de granada
+nem flashes, então `grenades`/`blinds` vêm do demoparser2 (híbrido).
+"""
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Any, Protocol
 
 from app.parsers.normalize import (
-    add_rows,
     append_canonical,
+    as_bomb_site,
     as_bool,
     as_float,
     as_int,
+    as_side,
     as_str,
+    as_winner,
+    clean_steam,
     empty_tables,
     finalize,
     records,
     round_number,
-    side_is_enemy,
     tick_time,
     value,
 )
 from app.parsers.result import ParsedDemo
+
+logger = logging.getLogger("cs2-lab.parsers.awpy")
 
 
 class DemoFactory(Protocol):
@@ -44,11 +54,15 @@ def _header_value(header: Any, *names: str, default: Any = None) -> Any:
     return default
 
 
-def _round_start_by_number(rounds: list[dict]) -> dict[int, int]:
-    return {
-        as_int(row.get("round_number"), 1) or 1: as_int(row.get("start_tick"), 0) or 0
-        for row in rounds
-    }
+def _bomb_event(raw: Any) -> str:
+    text = (as_str(raw, "") or "").strip().lower()
+    if "plant" in text:
+        return "plant"
+    if "defus" in text:
+        return "defuse"
+    if "explod" in text or "detonate" in text:
+        return "explode"
+    return text
 
 
 def parse_demo(
@@ -70,27 +84,74 @@ def parse_demo(
 
     tables = empty_tables()
 
+    # --- rounds (winner em minúsculo no awpy => normaliza) ---
+    round_starts: dict[int, int] = {}
     for row in records(getattr(demo, "rounds", None)):
+        rn = round_number(row)
+        start_tick = as_int(value(row, "start", "start_tick", "freeze_end"), 0) or 0
+        round_starts[rn] = start_tick
+        plant_tick = as_int(value(row, "bomb_plant", "plant_tick", "bomb_plant_tick"))
         append_canonical(
             tables,
             "rounds",
             {
                 "match_id": match_id,
-                "round_number": round_number(row),
-                "winner": as_str(value(row, "winner", "winning_side", "winner_side"), ""),
-                "reason": as_str(value(row, "reason", "end_reason", "round_end_reason"), ""),
-                "start_tick": as_int(value(row, "start_tick", "freeze_end_tick", "start"), 0),
-                "end_tick": as_int(value(row, "end_tick", "end"), 0),
-                "bomb_planted": as_bool(value(row, "bomb_planted", "has_bomb_plant"), False),
-                "bomb_site": as_str(value(row, "bomb_site", "site", "plant_site")),
-                "plant_tick": as_int(value(row, "plant_tick", "bomb_plant_tick")),
+                "round_number": rn,
+                "winner": as_winner(value(row, "winner", "winning_side")),
+                "reason": as_str(value(row, "reason", "end_reason"), ""),
+                "start_tick": start_tick,
+                "end_tick": as_int(value(row, "end", "end_tick", "official_end"), 0),
+                "bomb_planted": plant_tick is not None,
+                "bomb_site": as_bomb_site(value(row, "bomb_site", "site", "plant_site")),
+                "plant_tick": plant_tick,
                 "defuse_tick": as_int(value(row, "defuse_tick", "bomb_defuse_tick")),
-                "t_team": as_str(value(row, "t_team", "team_t", "terrorist_team"), team_a),
-                "ct_team": as_str(value(row, "ct_team", "team_ct", "ct_team_name"), team_b),
+                "t_team": as_str(value(row, "t_team", "team_t"), team_a),
+                "ct_team": as_str(value(row, "ct_team", "team_ct"), team_b),
             },
         )
-    round_starts = _round_start_by_number(tables["rounds"])
 
+    def round_start_of(rn: int) -> int:
+        return round_starts.get(rn, 0)
+
+    # --- ticks (X/Y/Z, side, round_num; sem yaw/armor/weapon/alive no awpy) ---
+    side_by_round_steam: dict[tuple[int, str], str] = {}
+    side_by_steam: dict[str, str] = {}
+    for row in records(getattr(demo, "ticks", None)):
+        rn = round_number(row)
+        steam = clean_steam(value(row, "steamid", "steam_id"))
+        side = as_side(value(row, "side", "team_side"))
+        hp = as_int(value(row, "health", "hp"), 0) or 0
+        if steam and side:
+            side_by_round_steam[(rn, steam)] = side
+            side_by_steam.setdefault(steam, side)
+        append_canonical(
+            tables,
+            "ticks",
+            {
+                "match_id": match_id,
+                "round_number": rn,
+                "tick": as_int(value(row, "tick"), 0),
+                "time": tick_time(row, round_start_of(rn), tick_rate),
+                "steam_id": steam,
+                "name": as_str(value(row, "name"), ""),
+                "side": side,
+                "x": as_float(value(row, "X", "x"), 0.0),
+                "y": as_float(value(row, "Y", "y"), 0.0),
+                "z": as_float(value(row, "Z", "z"), 0.0),
+                "yaw": as_float(value(row, "yaw", "view_yaw")),
+                "hp": hp,
+                "armor": as_int(value(row, "armor", "armor_value")),
+                "weapon": as_str(value(row, "active_weapon", "weapon")),
+                "alive": as_bool(value(row, "is_alive", "alive"), hp > 0),
+            },
+        )
+
+    def side_of(rn: int, steam: str | None) -> str:
+        if not steam:
+            return ""
+        return side_by_round_steam.get((rn, steam)) or side_by_steam.get(steam, "")
+
+    # --- kills (com posições e side) ---
     for row in records(getattr(demo, "kills", None)):
         rn = round_number(row)
         append_canonical(
@@ -100,33 +161,24 @@ def parse_demo(
                 "match_id": match_id,
                 "round_number": rn,
                 "tick": as_int(value(row, "tick"), 0),
-                "time": tick_time(row, round_starts.get(rn, 0), tick_rate),
-                "attacker_steam_id": as_str(
-                    value(row, "attacker_steam_id", "attacker_steamid", "attacker_XUID"), ""
-                ),
-                "victim_steam_id": as_str(
-                    value(row, "victim_steam_id", "victim_steamid", "victim_XUID"), ""
-                ),
-                "assister_steam_id": as_str(
-                    value(row, "assister_steam_id", "assister_steamid", "assister_XUID")
-                ),
+                "time": tick_time(row, round_start_of(rn), tick_rate),
+                "attacker_steam_id": clean_steam(value(row, "attacker_steamid")),
+                "victim_steam_id": clean_steam(value(row, "victim_steamid")),
+                "assister_steam_id": clean_steam(value(row, "assister_steamid")),
                 "weapon": as_str(value(row, "weapon", "weapon_name"), ""),
                 "headshot": as_bool(value(row, "headshot", "is_headshot"), False),
-                "attacker_side": as_str(
-                    value(row, "attacker_side", "attacker_team_clan_name", "attacker_side"), ""
-                ),
-                "victim_side": as_str(
-                    value(row, "victim_side", "victim_team_clan_name", "victim_side"), ""
-                ),
-                "attacker_x": as_float(value(row, "attacker_x", "attacker_X"), 0.0),
-                "attacker_y": as_float(value(row, "attacker_y", "attacker_Y"), 0.0),
-                "attacker_z": as_float(value(row, "attacker_z", "attacker_Z"), 0.0),
-                "victim_x": as_float(value(row, "victim_x", "victim_X"), 0.0),
-                "victim_y": as_float(value(row, "victim_y", "victim_Y"), 0.0),
-                "victim_z": as_float(value(row, "victim_z", "victim_Z"), 0.0),
+                "attacker_side": as_side(value(row, "attacker_side")),
+                "victim_side": as_side(value(row, "victim_side")),
+                "attacker_x": as_float(value(row, "attacker_X", "attacker_x"), 0.0),
+                "attacker_y": as_float(value(row, "attacker_Y", "attacker_y"), 0.0),
+                "attacker_z": as_float(value(row, "attacker_Z", "attacker_z"), 0.0),
+                "victim_x": as_float(value(row, "victim_X", "victim_x"), 0.0),
+                "victim_y": as_float(value(row, "victim_Y", "victim_y"), 0.0),
+                "victim_z": as_float(value(row, "victim_Z", "victim_z"), 0.0),
             },
         )
 
+    # --- damages ---
     for row in records(getattr(demo, "damages", None)):
         rn = round_number(row)
         append_canonical(
@@ -136,50 +188,69 @@ def parse_demo(
                 "match_id": match_id,
                 "round_number": rn,
                 "tick": as_int(value(row, "tick"), 0),
-                "time": tick_time(row, round_starts.get(rn, 0), tick_rate),
-                "attacker_steam_id": as_str(
-                    value(row, "attacker_steam_id", "attacker_steamid"), ""
-                ),
-                "victim_steam_id": as_str(value(row, "victim_steam_id", "victim_steamid"), ""),
+                "time": tick_time(row, round_start_of(rn), tick_rate),
+                "attacker_steam_id": clean_steam(value(row, "attacker_steamid")),
+                "victim_steam_id": clean_steam(value(row, "victim_steamid")),
                 "weapon": as_str(value(row, "weapon", "weapon_name"), ""),
-                "hp_damage": as_int(value(row, "hp_damage", "dmg_health", "health_damage"), 0),
-                "armor_damage": as_int(value(row, "armor_damage", "dmg_armor"), 0),
+                "hp_damage": as_int(value(row, "dmg_health", "hp_damage", "dmg_health_real"), 0),
+                "armor_damage": as_int(value(row, "dmg_armor", "armor_damage"), 0),
                 "hitgroup": as_str(value(row, "hitgroup", "hit_group"), ""),
             },
         )
 
-    add_rows(tables, "shots", match_id, records(getattr(demo, "shots", None)))
-    add_rows(tables, "bomb_events", match_id, records(getattr(demo, "bomb", None)))
-    add_rows(tables, "grenades", match_id, records(getattr(demo, "grenades", None)))
-    add_rows(tables, "blinds", match_id, records(getattr(demo, "blinds", None)))
-    add_rows(tables, "ticks", match_id, records(getattr(demo, "ticks", None)))
+    # --- shots (weapon_fire; inclui throws de granada, conforme o contrato) ---
+    for row in records(getattr(demo, "shots", None)):
+        rn = round_number(row)
+        append_canonical(
+            tables,
+            "shots",
+            {
+                "match_id": match_id,
+                "round_number": rn,
+                "tick": as_int(value(row, "tick"), 0),
+                "time": tick_time(row, round_start_of(rn), tick_rate),
+                "steam_id": clean_steam(value(row, "player_steamid", "steamid", "user_steamid")),
+                "weapon": as_str(value(row, "weapon", "weapon_name"), ""),
+                "x": as_float(value(row, "player_X", "X", "x"), 0.0),
+                "y": as_float(value(row, "player_Y", "Y", "y"), 0.0),
+                "z": as_float(value(row, "player_Z", "Z", "z"), 0.0),
+            },
+        )
 
-    # Awpy nem sempre expõe `blinds` agregado; se existir `flashes`, aceite também.
-    if not tables["blinds"]:
-        for row in records(getattr(demo, "flashes", None)):
-            flasher_side = as_str(value(row, "flasher_side"))
-            victim_side = as_str(value(row, "victim_side"))
-            append_canonical(
-                tables,
-                "blinds",
-                {
-                    "match_id": match_id,
-                    "round_number": round_number(row),
-                    "tick": as_int(value(row, "tick"), 0),
-                    "time": tick_time(row, 0, tick_rate),
-                    "flasher_steam_id": as_str(value(row, "flasher_steam_id", "attacker_steam_id")),
-                    "victim_steam_id": as_str(value(row, "victim_steam_id", "player_steam_id"), ""),
-                    "flasher_side": flasher_side,
-                    "victim_side": victim_side,
-                    "is_enemy": as_bool(
-                        value(row, "is_enemy"), side_is_enemy(flasher_side, victim_side)
-                    ),
-                    "duration": as_float(value(row, "duration", "flash_duration"), 0.0),
-                    "entity_id": as_int(value(row, "entity_id", "grenade_entity_id")),
-                },
-            )
+    # --- bomb_events ---
+    for row in records(getattr(demo, "bomb", None)):
+        rn = round_number(row)
+        append_canonical(
+            tables,
+            "bomb_events",
+            {
+                "match_id": match_id,
+                "round_number": rn,
+                "tick": as_int(value(row, "tick"), 0),
+                "time": tick_time(row, round_start_of(rn), tick_rate),
+                "event": _bomb_event(value(row, "event")),
+                "steam_id": clean_steam(value(row, "steamid", "user_steamid")),
+                "site": as_bomb_site(value(row, "bombsite", "site")),
+                "x": as_float(value(row, "X", "x")),
+                "y": as_float(value(row, "Y", "y")),
+                "z": as_float(value(row, "Z", "z")),
+            },
+        )
 
-    tables["replay_frames"] = list(tables["ticks"])
+    # --- grenades + blinds via demoparser2 (awpy não expõe esses eventos) ---
+    _supplement_utility(
+        demo_path,
+        match_id=match_id,
+        tick_rate=tick_rate,
+        side_of=side_of,
+        round_start_of=round_start_of,
+        tables=tables,
+    )
+
+    # replay_frames = downsample de ticks (1 a cada ~8 ticks).
+    step = max(1, (tick_rate or 64) // 8)
+    tables["replay_frames"] = [row for row in tables["ticks"] if (row["tick"] or 0) % step == 0]
+
     return finalize(
         match_id=match_id,
         map_name=map_name,
@@ -188,3 +259,35 @@ def parse_demo(
         tick_rate=tick_rate,
         tables=tables,
     )
+
+
+def _supplement_utility(
+    demo_path: Path,
+    *,
+    match_id: str,
+    tick_rate: int | None,
+    side_of: Any,
+    round_start_of: Any,
+    tables: dict[str, list[dict]],
+) -> None:
+    """Preenche grenades/blinds via demoparser2; falha aqui não derruba o parse."""
+    try:
+        import importlib.util
+
+        if importlib.util.find_spec("demoparser2") is None:
+            return
+        from app.parsers.parse_with_demoparser2 import extract_utility_events
+
+        utility = extract_utility_events(
+            demo_path,
+            match_id=match_id,
+            tick_rate=tick_rate,
+            side_of=side_of,
+            round_start_of=round_start_of,
+        )
+        tables["grenades"] = utility["grenades"]
+        tables["blinds"] = utility["blinds"]
+    except (KeyboardInterrupt, SystemExit):
+        raise
+    except BaseException as exc:  # noqa: BLE001 - utility é best-effort
+        logger.warning("Falha ao extrair granadas/flashes via demoparser2: %s", exc)
