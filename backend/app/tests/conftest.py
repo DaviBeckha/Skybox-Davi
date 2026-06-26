@@ -65,12 +65,18 @@ def tmp_data(tmp_path, monkeypatch) -> "object":
     raw = tmp_path / "raw_demos"
     parquet = tmp_path / "parquet"
     duckdb = tmp_path / "duckdb"
-    for d in (raw, parquet, duckdb):
+    maps = tmp_path / "maps"
+    radars = maps / "radars"
+    radar_info = maps / "radar_info"
+    for d in (raw, parquet, duckdb, radars, radar_info):
         d.mkdir(parents=True, exist_ok=True)
     monkeypatch.setattr(paths, "RAW_DEMOS_DIR", raw)
     monkeypatch.setattr(paths, "PARQUET_DIR", parquet)
     monkeypatch.setattr(paths, "DUCKDB_DIR", duckdb)
     monkeypatch.setattr(paths, "DUCKDB_PATH", duckdb / "cs2_lab.duckdb")
+    monkeypatch.setattr(paths, "MAPS_DIR", maps)
+    monkeypatch.setattr(paths, "MAPS_RADARS_DIR", radars)
+    monkeypatch.setattr(paths, "MAPS_RADAR_INFO_DIR", radar_info)
     return tmp_path
 
 
@@ -84,9 +90,7 @@ def db_session(session_factory: sessionmaker) -> Iterator[Session]:
 
 
 @pytest.fixture()
-def client(
-    session_factory: sessionmaker, tmp_data, monkeypatch
-) -> Iterator[TestClient]:
+def client(session_factory: sessionmaker, tmp_data, monkeypatch) -> Iterator[TestClient]:
     def override_get_db() -> Iterator[Session]:
         s = session_factory()
         try:

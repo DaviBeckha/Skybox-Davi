@@ -15,7 +15,7 @@
 | 05 | Importação de demos | 04 | [x] |
 | 06 | Jobs de parsing | 05 | [x] |
 | 07 | Parsing real | 06 | [x] |
-| 08 | API de Analytics | 07 | [ ] |
+| 08 | API de Analytics | 07 | [x] |
 | 09 | Frontend base | 04 | [ ] |
 | 10 | Dashboard | 08, 09 | [ ] |
 | 11 | Demos UI | 05, 09 | [ ] |
@@ -85,17 +85,17 @@
 
 ## Phase 08 — API de Analytics
 
-- [ ] `GET /matches` lista as partidas processadas.
-- [ ] `GET /matches/{id}/summary`, `/rounds`, `/players` retornam dados coerentes.
-- [ ] `GET /matches/{id}/stats/player` retorna as métricas mínimas.
-- [ ] `GET /matches/{id}/stats/utility` retorna granadas por tipo, HE/molly dano, flashes que cegaram inimigos e flash assists por player.
-- [ ] `GET /matches/{id}/stats/matchups` retorna a kill matrix (quem matou quem, quantas vezes).
-- [ ] `GET /matches/{id}/stats/death-positions?player=<id>` retorna as mortes do player e o `top_spot`.
-- [ ] `GET /matches/{id}/stats/bombsites` retorna plants, round wins e win rate por bombsite/time.
-- [ ] `GET /matches/{id}/stats/weapons` retorna, por player e por arma, disparos, accuracy, kills e armas usadas, mais HS% geral, dano por tiro e first-shot accuracy.
-- [ ] `GET /matches/{id}/replay?round=N&sample_rate=S` retorna frames com `radar_x/radar_y` no formato do contrato.
-- [ ] `GET /matches/{id}/heatmap?type=kills|deaths|path|utility|grenades` responde para cada tipo (incluindo `path&player=<id>` para movimento), com pontos convertidos.
-- [ ] `GET /maps`, `/maps/{name}/radar`, `/maps/{name}/metadata` respondem (imagem + metadata reais).
+- [x] `GET /matches` lista as partidas processadas.
+- [x] `GET /matches/{id}/summary`, `/rounds`, `/players` retornam dados coerentes.
+- [x] `GET /matches/{id}/stats/player` retorna as métricas mínimas.
+- [x] `GET /matches/{id}/stats/utility` retorna granadas por tipo, HE/molly dano, flashes que cegaram inimigos e flash assists por player.
+- [x] `GET /matches/{id}/stats/matchups` retorna a kill matrix (quem matou quem, quantas vezes).
+- [x] `GET /matches/{id}/stats/death-positions?player=<id>` retorna as mortes do player e o `top_spot`.
+- [x] `GET /matches/{id}/stats/bombsites` retorna plants, round wins e win rate por bombsite/time.
+- [x] `GET /matches/{id}/stats/weapons` retorna, por player e por arma, disparos, accuracy, kills e armas usadas, mais HS% geral, dano por tiro e first-shot accuracy.
+- [x] `GET /matches/{id}/replay?round=N&sample_rate=S` retorna frames com `radar_x/radar_y` no formato do contrato.
+- [x] `GET /matches/{id}/heatmap?type=kills|deaths|path|utility|grenades` responde para cada tipo (incluindo `path&player=<id>` para movimento), com pontos convertidos.
+- [x] `GET /maps`, `/maps/{name}/radar`, `/maps/{name}/metadata` respondem (imagem + metadata reais).
 
 ## Phase 09 — Frontend base
 

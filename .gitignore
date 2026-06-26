@@ -35,6 +35,7 @@ data/maps/radars/*
 !data/maps/radars/.gitkeep
 data/maps/radar_info/*
 !data/maps/radar_info/.gitkeep
+!data/maps/radar_info/*.json
 
 # ===== Ambiente / segredos =====
 .env
