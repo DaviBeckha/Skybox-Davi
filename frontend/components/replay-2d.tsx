@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { PageHeader } from "@/components/page-header";
 import { DEFAULT_API_BASE_URL } from "@/lib/api";
@@ -10,12 +10,30 @@ import {
   useMatchSummaryQuery,
   useReplayQuery
 } from "@/lib/queries";
+import type { ReplayPlayer } from "@/lib/types";
 
 const SPEEDS = [0.25, 0.5, 1, 2, 4];
-const SAMPLE_RATE = 8;
+// Densidade nativa do parser (1 frame a cada ~8 ticks); a suavidade vem da
+// interpolação, não de baixar mais frames.
+const SAMPLE_RATE = 1;
 
 function shorten(name: string): string {
   return name.length > 9 ? `${name.slice(0, 8)}…` : name;
+}
+
+function lerp(a: number, b: number, t: number): number {
+  return a + (b - a) * t;
+}
+
+function lerpAngle(a: number | null, b: number | null, t: number): number | null {
+  if (a === null) {
+    return b;
+  }
+  if (b === null) {
+    return a;
+  }
+  const delta = ((b - a + 540) % 360) - 180;
+  return a + delta * t;
 }
 
 export function Replay2D({ matchId }: { matchId: string }) {
@@ -25,48 +43,91 @@ export function Replay2D({ matchId }: { matchId: string }) {
   const metadataQuery = useMapMetadataQuery(map);
 
   const [round, setRound] = useState(1);
-  const [frameIndex, setFrameIndex] = useState(0);
+  const [playhead, setPlayhead] = useState(0); // posição contínua em "frames"
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(1);
 
   const replayQuery = useReplayQuery(matchId, round, SAMPLE_RATE);
   const frames = useMemo(() => replayQuery.data?.frames ?? [], [replayQuery.data]);
+  const totalFrames = frames.length;
 
   const imageWidth = metadataQuery.data?.imageWidth ?? 1024;
   const imageHeight = metadataQuery.data?.imageHeight ?? 1024;
   const radarUrl = map ? `${DEFAULT_API_BASE_URL}/maps/${encodeURIComponent(map)}/radar` : "";
+  const tickRate = replayQuery.data?.tickRate ?? 64;
+
+  // fps de origem: tick_rate / (delta médio de ticks entre frames).
+  const sourceFps = useMemo(() => {
+    if (frames.length < 2) {
+      return 8;
+    }
+    const span = frames[frames.length - 1].tick - frames[0].tick;
+    const avgDelta = span / (frames.length - 1);
+    return avgDelta > 0 ? (tickRate || 64) / avgDelta : 8;
+  }, [frames, tickRate]);
 
   useEffect(() => {
-    setFrameIndex(0);
+    setPlayhead(0);
     setPlaying(false);
   }, [round]);
 
   useEffect(() => {
-    setFrameIndex((index) => (index > frames.length - 1 ? 0 : index));
-  }, [frames.length]);
+    setPlayhead((value) => (value > totalFrames - 1 ? 0 : value));
+  }, [totalFrames]);
 
+  const lastTsRef = useRef<number | null>(null);
   useEffect(() => {
-    if (!playing || frames.length === 0) {
+    if (!playing || totalFrames < 2) {
       return;
     }
-    const interval = setInterval(() => {
-      setFrameIndex((index) => (index >= frames.length - 1 ? index : index + 1));
-    }, Math.max(30, Math.round(110 / speed)));
-    return () => clearInterval(interval);
-  }, [playing, speed, frames.length]);
+    lastTsRef.current = null;
+    let raf = 0;
+    const step = (timestamp: number) => {
+      if (lastTsRef.current === null) {
+        lastTsRef.current = timestamp;
+      }
+      const dt = (timestamp - lastTsRef.current) / 1000;
+      lastTsRef.current = timestamp;
+      setPlayhead((value) => Math.min(totalFrames - 1, value + dt * sourceFps * speed));
+      raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [playing, speed, totalFrames, sourceFps]);
 
   useEffect(() => {
-    if (playing && frames.length > 0 && frameIndex >= frames.length - 1) {
+    if (playing && totalFrames > 0 && playhead >= totalFrames - 1) {
       setPlaying(false);
     }
-  }, [playing, frameIndex, frames.length]);
+  }, [playing, playhead, totalFrames]);
 
   const availableRounds = useMemo(() => {
     const numbers = (roundsQuery.data ?? []).map((item) => item.roundNumber).sort((a, b) => a - b);
     return numbers.length > 0 ? numbers : [1];
   }, [roundsQuery.data]);
 
-  const currentFrame = frames[Math.min(frameIndex, Math.max(0, frames.length - 1))];
+  // Frame base (lo) e próximo (hi) + fração para interpolar.
+  const lo = Math.max(0, Math.min(Math.floor(playhead), frames.length - 1));
+  const hi = Math.min(lo + 1, frames.length - 1);
+  const t = playhead - lo;
+  const baseFrame = frames[lo];
+  const nextFrame = frames[hi];
+
+  const interpolatedPlayers: ReplayPlayer[] = useMemo(() => {
+    if (!baseFrame) {
+      return [];
+    }
+    const nextById = new Map((nextFrame?.players ?? []).map((p) => [p.steamId, p]));
+    return baseFrame.players.map((player) => {
+      const target = nextById.get(player.steamId) ?? player;
+      return {
+        ...player,
+        radarX: lerp(player.radarX, target.radarX, t),
+        radarY: lerp(player.radarY, target.radarY, t),
+        yaw: lerpAngle(player.yaw, target.yaw, t)
+      };
+    });
+  }, [baseFrame, nextFrame, t]);
 
   const timelineEvents = useMemo(() => {
     if (frames.length === 0) {
@@ -89,8 +150,8 @@ export function Replay2D({ matchId }: { matchId: string }) {
     if (frames.length === 0) {
       return;
     }
-    if (frameIndex >= frames.length - 1) {
-      setFrameIndex(0);
+    if (playhead >= frames.length - 1) {
+      setPlayhead(0);
     }
     setPlaying((value) => !value);
   }
@@ -161,7 +222,7 @@ export function Replay2D({ matchId }: { matchId: string }) {
         </div>
 
         <span className="replay-counter">
-          {frames.length > 0 ? frameIndex + 1 : 0}/{frames.length}
+          {frames.length > 0 ? Math.floor(playhead) + 1 : 0}/{frames.length}
         </span>
       </div>
 
@@ -170,10 +231,11 @@ export function Replay2D({ matchId }: { matchId: string }) {
         type="range"
         min={0}
         max={Math.max(0, frames.length - 1)}
-        value={Math.min(frameIndex, Math.max(0, frames.length - 1))}
+        step={0.01}
+        value={Math.min(playhead, Math.max(0, frames.length - 1))}
         aria-label="Linha do tempo do round"
         onChange={(event) => {
-          setFrameIndex(Number(event.target.value));
+          setPlayhead(Number(event.target.value));
           setPlaying(false);
         }}
       />
@@ -191,7 +253,7 @@ export function Replay2D({ matchId }: { matchId: string }) {
         {frames.length > 1 ? (
           <span
             className="timeline-cursor"
-            style={{ left: `${(frameIndex / (frames.length - 1)) * 100}%` }}
+            style={{ left: `${(playhead / (frames.length - 1)) * 100}%` }}
           />
         ) : null}
       </div>
@@ -208,7 +270,7 @@ export function Replay2D({ matchId }: { matchId: string }) {
               <p className="replay-overlay-note">Sem frames para este round.</p>
             ) : (
               <>
-                {currentFrame?.events
+                {baseFrame?.events
                   .filter((event) => event.radarX !== null && event.radarY !== null)
                   .map((event, index) => (
                     <span
@@ -224,7 +286,7 @@ export function Replay2D({ matchId }: { matchId: string }) {
                     />
                   ))}
 
-                {currentFrame?.players
+                {interpolatedPlayers
                   .filter((player) => player.alive)
                   .map((player) => (
                     <div
@@ -254,7 +316,7 @@ export function Replay2D({ matchId }: { matchId: string }) {
 
         <aside className="replay-roster panel" aria-label="Jogadores">
           {teams.map((team) => {
-            const roster = (currentFrame?.players ?? []).filter((player) => player.side === team.side);
+            const roster = (baseFrame?.players ?? []).filter((player) => player.side === team.side);
             return (
               <div className="roster-team" data-side={team.side} key={team.side}>
                 <h3>{team.label}</h3>
