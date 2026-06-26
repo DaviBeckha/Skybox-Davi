@@ -10,6 +10,8 @@ nas dimensões certas — basta dropar o overview real no diretório para substi
 from __future__ import annotations
 
 import json
+import logging
+import re
 import struct
 import zlib
 from pathlib import Path
@@ -18,19 +20,45 @@ from typing import Any
 from app.analytics.map_projection import RadarMetadata
 from app.core import paths
 
-DEFAULT_MAP_METADATA: dict[str, RadarMetadata] = {
-    # Metadata usada como fallback local do MVP. Pode ser substituída por arquivos
-    # extraídos da instalação do CS2 em data/maps/radar_info/<map>.json.
-    "de_mirage": {
-        "map": "de_mirage",
-        "pos_x": -3230,
-        "pos_y": 1713,
-        "scale": 5.0,
+logger = logging.getLogger("cs2-lab.maps")
+
+# Constantes de overview (pos_x, pos_y, scale) dos mapas do competitivo.
+# Fonte: valores públicos de overview do CS2 (compatíveis com awpy/SimpleRadar).
+# Podem ser substituídas por arquivos em data/maps/radar_info/<map>.json.
+_MAP_OVERVIEWS: dict[str, tuple[float, float, float]] = {
+    "de_ancient": (-2953, 2164, 5.0),
+    "de_anubis": (-2796, 3328, 5.22),
+    "de_dust2": (-2476, 3239, 4.4),
+    "de_inferno": (-2087, 3870, 4.9),
+    "de_mirage": (-3230, 1713, 5.0),
+    "de_nuke": (-3453, 2887, 7.0),
+    "de_overpass": (-4831, 1781, 5.2),
+    "de_train": (-2308, 2078, 4.082),
+    "de_vertigo": (-3168, 1762, 4.0),
+}
+
+
+def _overview(map_name: str, pos_x: float, pos_y: float, scale: float) -> RadarMetadata:
+    return {
+        "map": map_name,
+        "pos_x": pos_x,
+        "pos_y": pos_y,
+        "scale": scale,
         "image_width": 1024,
         "image_height": 1024,
         "levels": None,
     }
+
+
+DEFAULT_MAP_METADATA: dict[str, RadarMetadata] = {
+    name: _overview(name, x, y, scale) for name, (x, y, scale) in _MAP_OVERVIEWS.items()
 }
+
+# Projeção genérica para mapas desconhecidos: mantém coordenadas de mundo
+# (~±4096) dentro do canvas 0..1024 sem quebrar replay/heatmap.
+_GENERIC_OVERVIEW: tuple[float, float, float] = (-4096.0, 4096.0, 8.0)
+
+_SAFE_MAP_NAME = re.compile(r"^[a-z0-9_]+$")
 
 # Cache de placeholders renderizados por (width, height).
 _placeholder_cache: dict[tuple[int, int], bytes] = {}
@@ -117,13 +145,19 @@ def list_maps() -> list[RadarMetadata]:
 
 def load_metadata(map_name: str) -> RadarMetadata:
     ensure_default_assets()
+    if not _SAFE_MAP_NAME.match(map_name or ""):
+        raise FileNotFoundError(map_name)
     metadata_path = paths.MAPS_RADAR_INFO_DIR / f"{map_name}.json"
     if metadata_path.exists():
         raw: dict[str, Any] = json.loads(metadata_path.read_text(encoding="utf-8"))
     elif map_name in DEFAULT_MAP_METADATA:
         raw = dict(DEFAULT_MAP_METADATA[map_name])
     else:
-        raise FileNotFoundError(map_name)
+        # Mapa sem overview conhecido: usa projeção genérica em vez de quebrar
+        # replay/heatmap. Coloque data/maps/radar_info/<map>.json para o real.
+        logger.warning("Overview do mapa '%s' desconhecido; usando projeção genérica.", map_name)
+        gx, gy, gscale = _GENERIC_OVERVIEW
+        raw = _overview(map_name, gx, gy, gscale)
     return {
         "map": str(raw.get("map", map_name)),
         "pos_x": float(raw["pos_x"]),
@@ -137,11 +171,10 @@ def load_metadata(map_name: str) -> RadarMetadata:
 
 def radar_path(map_name: str) -> Path:
     ensure_default_assets()
+    if not _SAFE_MAP_NAME.match(map_name or ""):
+        raise FileNotFoundError(map_name)
     candidate = paths.MAPS_RADARS_DIR / f"{map_name}.png"
     if not candidate.exists():
-        if map_name not in DEFAULT_MAP_METADATA and not (
-            paths.MAPS_RADAR_INFO_DIR / f"{map_name}.json"
-        ).exists():
-            raise FileNotFoundError(map_name)
+        # Sempre serve um placeholder do tamanho certo (substituível pelo radar real).
         candidate.write_bytes(_placeholder_for(map_name))
     return candidate

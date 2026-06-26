@@ -5,8 +5,11 @@ from __future__ import annotations
 from typing import Any
 
 from app.analytics.map_projection import RadarMetadata, world_to_radar
-from app.analytics.metrics import in_round_range, parse_round_range
+from app.analytics.metrics import in_round_range, normalize_weapon, parse_round_range
 from app.analytics.reader import read_tables
+
+# Teto de pontos por heatmap (evita payloads gigantes, ex.: pathing geral).
+_MAX_POINTS = 3000
 
 
 def build_heatmap(
@@ -33,7 +36,7 @@ def build_heatmap(
                 continue
             if side and row["attacker_side"] != side:
                 continue
-            if weapon and row["weapon"] != weapon:
+            if weapon and normalize_weapon(row["weapon"]) != normalize_weapon(weapon):
                 continue
             if not in_round_range(row["round_number"], rounds):
                 continue
@@ -44,7 +47,7 @@ def build_heatmap(
                 continue
             if side and row["victim_side"] != side:
                 continue
-            if weapon and row["weapon"] != weapon:
+            if weapon and normalize_weapon(row["weapon"]) != normalize_weapon(weapon):
                 continue
             if not in_round_range(row["round_number"], rounds):
                 continue
@@ -71,6 +74,12 @@ def build_heatmap(
             points.append(_point(row["x"], row["y"], metadata))
     else:
         raise ValueError("tipo de heatmap inválido")
+
+    # Limita o payload (ex.: `path` sem filtro = todos os ticks de todos os players)
+    # amostrando uniformemente, mantendo o heatmap representativo.
+    if len(points) > _MAX_POINTS:
+        stride = (len(points) // _MAX_POINTS) + 1
+        points = points[::stride]
 
     return {
         "match_id": match_id,

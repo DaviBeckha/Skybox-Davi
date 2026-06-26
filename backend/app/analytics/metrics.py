@@ -17,6 +17,18 @@ def ratio(num: float, den: float, ndigits: int = 4) -> float:
     return round(num / den, ndigits) if den else 0.0
 
 
+def normalize_weapon(weapon: str | None) -> str:
+    """Nome da arma em minúsculas e sem o prefixo `weapon_` (merge na leitura).
+
+    Garante que dados já parseados com nomes divergentes (`ak47` vs `weapon_ak47`)
+    sejam contados como uma arma só, sem precisar re-parsear.
+    """
+    text = (weapon or "").strip().lower()
+    if text.startswith("weapon_"):
+        text = text[len("weapon_") :]
+    return text
+
+
 # --------------------------------------------------------------------------- #
 # First-shot accuracy (heurística de 1º disparo de cada rajada)               #
 # --------------------------------------------------------------------------- #

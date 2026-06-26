@@ -76,6 +76,21 @@ def as_str(raw: Any, default: str | None = None) -> str | None:
     return str(raw)
 
 
+def as_weapon(raw: Any, default: str | None = None) -> str | None:
+    """Normaliza o nome da arma: minúsculas e sem o prefixo `weapon_`.
+
+    Os eventos do parser divergem (`kills` traz `ak47`, `weapon_fire` traz
+    `weapon_ak47`); sem isso a mesma arma é contada duas vezes.
+    """
+    text = as_str(raw)
+    if text is None:
+        return default
+    text = text.strip().lower()
+    if text.startswith("weapon_"):
+        text = text[len("weapon_") :]
+    return text or default
+
+
 def side_is_enemy(left: str | None, right: str | None) -> bool:
     return left in {"CT", "T"} and right in {"CT", "T"} and left != right
 

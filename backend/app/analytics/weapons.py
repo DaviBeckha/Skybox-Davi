@@ -5,13 +5,18 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import Any
 
-from app.analytics.metrics import first_shot_stats
+from app.analytics.metrics import first_shot_stats, normalize_weapon
 from app.analytics.metrics import ratio as _ratio
 from app.analytics.reader import read_tables
 
 
 def build_weapons(match_id: str) -> dict[str, Any]:
     tables = read_tables(match_id, "players", "shots", "damages", "kills")
+    # Normaliza o nome da arma (remove `weapon_`) para não contar a mesma arma
+    # duas vezes quando os eventos do parser divergem.
+    for table in ("shots", "damages", "kills"):
+        for row in tables[table]:
+            row["weapon"] = normalize_weapon(row.get("weapon"))
     shots = defaultdict(int)
     hits = defaultdict(int)
     damage = defaultdict(int)

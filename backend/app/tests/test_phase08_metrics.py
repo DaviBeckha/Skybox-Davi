@@ -15,8 +15,18 @@ from app.analytics.metrics import (
     count_trade_kills,
     first_shot_stats,
     in_round_range,
+    normalize_weapon,
     parse_round_range,
 )
+
+
+def test_normalize_weapon_strips_prefix_and_lowercases() -> None:
+    assert normalize_weapon("weapon_awp") == "awp"
+    assert normalize_weapon("AWP") == "awp"
+    assert normalize_weapon("ak47") == "ak47"
+    assert normalize_weapon(None) == ""
+    # mesma arma com nomes divergentes colapsa em uma só
+    assert normalize_weapon("weapon_awp") == normalize_weapon("awp")
 
 
 def test_first_shot_stats_groups_bursts_and_detects_first_hit() -> None:
