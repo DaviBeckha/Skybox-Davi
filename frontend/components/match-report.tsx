@@ -1,7 +1,9 @@
 "use client";
 
 import { BarChart } from "@/components/bar-chart";
+import { type Column, DataTable } from "@/components/data-table";
 import { PageHeader } from "@/components/page-header";
+import { type TabItem, Tabs } from "@/components/tabs";
 import {
   useBombsiteStatsQuery,
   useMatchRoundsQuery,
@@ -11,6 +13,13 @@ import {
   useUtilityStatsQuery,
   useWeaponStatsQuery
 } from "@/lib/queries";
+import type {
+  BombsiteStats,
+  PlayerCoreStats,
+  PlayerWeaponStats,
+  UtilityStats,
+  WeaponStats
+} from "@/lib/types";
 
 const pct = (value: number) => `${Math.round(value * 100)}%`;
 const ratio = (num: number, den: number) => (den === 0 ? num.toFixed(2) : (num / den).toFixed(2));
@@ -60,6 +69,7 @@ export function MatchReport({ matchId }: { matchId: string }) {
   for (const player of playerStats) {
     nameBySteam.set(player.steamId, player.name ?? player.steamId);
   }
+  const teamLabel = (team: string | null) => (team === summary.teamA ? "a" : team === summary.teamB ? "b" : "");
   const label = (steamId: string) => nameBySteam.get(steamId) ?? steamId.slice(-5);
 
   const matrixPlayers = matchupsQuery.data?.players ?? [];
@@ -78,212 +88,218 @@ export function MatchReport({ matchId }: { matchId: string }) {
     display: pct(site.winRate)
   }));
 
-  return (
-    <>
-      <PageHeader
-        eyebrow="Match report"
-        title={`${summary.teamA ?? "Time A"} x ${summary.teamB ?? "Time B"}`}
-        description={`Mapa ${summary.map} · ${summary.roundsCount} rounds · ${summary.playersCount} jogadores.`}
-      />
+  const teamChip = (team: string | null) => (
+    <span className="team-chip" data-team={teamLabel(team)}>
+      {team ?? "—"}
+    </span>
+  );
 
-      <section className="surface-grid" aria-label="Relatório da partida">
-        {/* Placar */}
-        <article className="panel full scoreboard">
-          <div className="score-team">
-            <span>{summary.teamA ?? "Time A"}</span>
-            <strong>{summary.score.teamA ?? 0}</strong>
-          </div>
-          <div className="score-meta">
-            <span className="mono">{summary.map}</span>
-            <small>placar final</small>
-          </div>
-          <div className="score-team">
-            <span>{summary.teamB ?? "Time B"}</span>
-            <strong>{summary.score.teamB ?? 0}</strong>
-          </div>
-        </article>
+  const playerColumns: Column<PlayerCoreStats>[] = [
+    {
+      key: "name",
+      header: "Jogador",
+      sortable: true,
+      value: (p) => p.name ?? p.steamId,
+      render: (p) => (
+        <span className="cell-player">
+          <strong>{p.name ?? p.steamId.slice(-5)}</strong>
+          {teamChip(p.team)}
+        </span>
+      )
+    },
+    { key: "kills", header: "K", numeric: true, sortable: true, value: (p) => p.kills },
+    { key: "deaths", header: "D", numeric: true, sortable: true, value: (p) => p.deaths },
+    { key: "assists", header: "A", numeric: true, sortable: true, value: (p) => p.assists },
+    {
+      key: "kd",
+      header: "K/D",
+      numeric: true,
+      sortable: true,
+      value: (p) => (p.deaths === 0 ? p.kills : p.kills / p.deaths),
+      render: (p) => ratio(p.kills, p.deaths)
+    },
+    {
+      key: "adr",
+      header: "ADR",
+      numeric: true,
+      sortable: true,
+      value: (p) => p.adr,
+      render: (p) => p.adr.toFixed(1)
+    },
+    {
+      key: "kast",
+      header: "KAST",
+      numeric: true,
+      sortable: true,
+      value: (p) => p.kastPct,
+      render: (p) => pct(p.kastPct)
+    },
+    {
+      key: "entry",
+      header: "Entry K/D",
+      numeric: true,
+      sortable: true,
+      value: (p) => p.entryKills,
+      render: (p) => `${p.entryKills}/${p.entryDeaths}`
+    },
+    { key: "trade", header: "Trade", numeric: true, sortable: true, value: (p) => p.tradeKills },
+    { key: "clutch", header: "Clutch", numeric: true, sortable: true, value: (p) => p.clutches }
+  ];
 
-        {/* Rounds */}
-        <article className="panel full">
-          <div className="panel-head">
-            <h2>Rounds</h2>
-            <span>{rounds.length} no total</span>
-          </div>
-          {rounds.length === 0 ? (
-            <p className="state-note">Sem rounds registrados.</p>
-          ) : (
-            <div className="rounds-strip">
-              {[...rounds]
-                .sort((a, b) => a.roundNumber - b.roundNumber)
-                .map((round) => (
-                  <span
-                    className="round-chip"
-                    data-side={round.winner ?? "none"}
-                    key={round.roundNumber}
-                    title={`Round ${round.roundNumber}: ${round.winner ?? "?"} (${round.reason ?? "—"})`}
-                  >
-                    {round.roundNumber}
-                  </span>
-                ))}
+  const utilityColumns: Column<UtilityStats>[] = [
+    {
+      key: "name",
+      header: "Jogador",
+      sortable: true,
+      value: (u) => u.name ?? u.steamId,
+      render: (u) => <strong>{u.name ?? u.steamId.slice(-5)}</strong>
+    },
+    { key: "he", header: "HE", numeric: true, sortable: true, value: (u) => u.grenadesThrown.he },
+    { key: "flash", header: "Flash", numeric: true, sortable: true, value: (u) => u.grenadesThrown.flash },
+    { key: "smoke", header: "Smoke", numeric: true, sortable: true, value: (u) => u.grenadesThrown.smoke },
+    { key: "molotov", header: "Molotov", numeric: true, sortable: true, value: (u) => u.grenadesThrown.molotov },
+    { key: "decoy", header: "Decoy", numeric: true, sortable: true, value: (u) => u.grenadesThrown.decoy },
+    { key: "total", header: "Total", numeric: true, sortable: true, value: (u) => u.grenadesThrown.total },
+    { key: "heDmgCount", header: "HE c/ dano", numeric: true, sortable: true, value: (u) => u.heWithDamage },
+    { key: "heDmg", header: "Dano HE", numeric: true, sortable: true, value: (u) => u.heDamageTotal },
+    { key: "molyDmg", header: "Dano molly", numeric: true, sortable: true, value: (u) => u.molotovDamageTotal },
+    { key: "blinded", header: "Cegou", numeric: true, sortable: true, value: (u) => u.enemiesBlinded },
+    {
+      key: "blindTime",
+      header: "Tempo cegueira",
+      numeric: true,
+      sortable: true,
+      value: (u) => u.enemyBlindTime,
+      render: (u) => `${u.enemyBlindTime.toFixed(1)}s`
+    },
+    { key: "fa", header: "Flash assists", numeric: true, sortable: true, value: (u) => u.flashAssists }
+  ];
+
+  const weaponColumns: Column<WeaponStats>[] = [
+    { key: "weapon", header: "Arma", sortable: true, value: (w) => w.weapon },
+    { key: "shots", header: "Disparos", numeric: true, sortable: true, value: (w) => w.shots },
+    { key: "hits", header: "Hits", numeric: true, sortable: true, value: (w) => w.hits },
+    { key: "acc", header: "Acc", numeric: true, sortable: true, value: (w) => w.accuracy, render: (w) => pct(w.accuracy) },
+    { key: "kills", header: "Kills", numeric: true, sortable: true, value: (w) => w.kills },
+    { key: "hs", header: "HS", numeric: true, sortable: true, value: (w) => w.headshots },
+    { key: "hsPct", header: "HS%", numeric: true, sortable: true, value: (w) => w.hsPct, render: (w) => pct(w.hsPct) },
+    { key: "damage", header: "Dano", numeric: true, sortable: true, value: (w) => w.damage }
+  ];
+
+  const bombsiteColumns: Column<BombsiteStats>[] = [
+    { key: "team", header: "Time", sortable: true, value: (b) => b.team, render: (b) => teamChip(b.team) },
+    { key: "site", header: "Site", sortable: true, value: (b) => b.site },
+    { key: "plants", header: "Plants", numeric: true, sortable: true, value: (b) => b.plants },
+    { key: "wins", header: "Wins", numeric: true, sortable: true, value: (b) => b.roundWins },
+    { key: "winRate", header: "Win rate", numeric: true, sortable: true, value: (b) => b.winRate, render: (b) => pct(b.winRate) },
+    {
+      key: "postPlant",
+      header: "Pós-plant",
+      numeric: true,
+      sortable: true,
+      value: (b) => b.postPlantWinRate,
+      render: (b) => pct(b.postPlantWinRate)
+    }
+  ];
+
+  const weaponPlayerKey = (player: PlayerWeaponStats) => player.steamId;
+
+  const tabs: TabItem[] = [
+    {
+      id: "overview",
+      label: "Visão geral",
+      content: (
+        <section className="surface-grid">
+          <article className="panel full">
+            <div className="panel-head">
+              <h2>Rounds</h2>
+              <span>{rounds.length} no total</span>
             </div>
-          )}
-        </article>
+            {rounds.length === 0 ? (
+              <p className="state-note">Sem rounds registrados.</p>
+            ) : (
+              <div className="rounds-strip">
+                {[...rounds]
+                  .sort((a, b) => a.roundNumber - b.roundNumber)
+                  .map((round) => (
+                    <span
+                      className="round-chip"
+                      data-side={round.winner ?? "none"}
+                      key={round.roundNumber}
+                      title={`Round ${round.roundNumber}: ${round.winner ?? "?"} (${round.reason ?? "—"})`}
+                    >
+                      {round.roundNumber}
+                    </span>
+                  ))}
+              </div>
+            )}
+          </article>
 
-        {/* Tabela de jogadores */}
+          <article className="panel half">
+            <div className="panel-head">
+              <h2>Kills por jogador</h2>
+              <span>gráfico</span>
+            </div>
+            <BarChart data={killsChart} />
+          </article>
+
+          <article className="panel half">
+            <div className="panel-head">
+              <h2>Win rate por bombsite</h2>
+              <span>A vs B</span>
+            </div>
+            {bombsiteChart.length === 0 ? (
+              <p className="state-note">Sem plants registrados.</p>
+            ) : (
+              <BarChart data={bombsiteChart} max={100} />
+            )}
+          </article>
+        </section>
+      )
+    },
+    {
+      id: "players",
+      label: "Jogadores",
+      content: (
         <article className="panel full">
           <div className="panel-head">
             <h2>Jogadores</h2>
-            <span>KD · ADR · KAST · entry · trade · clutch</span>
+            <span>clique nos cabeçalhos para ordenar</span>
           </div>
-          {playerStats.length === 0 ? (
-            <p className="state-note">Sem estatísticas de jogadores.</p>
-          ) : (
-            <div className="table-scroll">
-              <table className="stat-table">
-                <thead>
-                  <tr>
-                    <th>Jogador</th>
-                    <th>Time</th>
-                    <th>K</th>
-                    <th>D</th>
-                    <th>A</th>
-                    <th>K/D</th>
-                    <th>ADR</th>
-                    <th>KAST</th>
-                    <th>Entry K/D</th>
-                    <th>Trade</th>
-                    <th>Clutch</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {[...playerStats]
-                    .sort((a, b) => b.kills - a.kills)
-                    .map((player) => (
-                      <tr key={player.steamId}>
-                        <td>{player.name ?? player.steamId.slice(-5)}</td>
-                        <td className="muted-cell">{player.team ?? "—"}</td>
-                        <td>{player.kills}</td>
-                        <td>{player.deaths}</td>
-                        <td>{player.assists}</td>
-                        <td>{ratio(player.kills, player.deaths)}</td>
-                        <td>{player.adr.toFixed(1)}</td>
-                        <td>{pct(player.kastPct)}</td>
-                        <td>
-                          {player.entryKills}/{player.entryDeaths}
-                        </td>
-                        <td>{player.tradeKills}</td>
-                        <td>{player.clutches}</td>
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <DataTable
+            columns={playerColumns}
+            rows={playerStats}
+            getRowKey={(p) => p.steamId}
+            initialSort={{ key: "kills", dir: "desc" }}
+            emptyLabel="Sem estatísticas de jogadores."
+          />
         </article>
-
-        {/* Gráfico simples: kills por jogador */}
-        <article className="panel half">
-          <div className="panel-head">
-            <h2>Kills por jogador</h2>
-            <span>gráfico</span>
-          </div>
-          <BarChart data={killsChart} />
-        </article>
-
-        {/* Sucesso por bombsite + gráfico A vs B */}
-        <article className="panel half">
-          <div className="panel-head">
-            <h2>Sucesso por bombsite</h2>
-            <span>win rate por site/time</span>
-          </div>
-          {bombsites.length === 0 ? (
-            <p className="state-note">Sem plants registrados.</p>
-          ) : (
-            <>
-              <BarChart data={bombsiteChart} max={100} />
-              <div className="table-scroll">
-                <table className="stat-table">
-                  <thead>
-                    <tr>
-                      <th>Time</th>
-                      <th>Site</th>
-                      <th>Plants</th>
-                      <th>Wins</th>
-                      <th>Win rate</th>
-                      <th>Pós-plant</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {bombsites.map((site) => (
-                      <tr key={`${site.team}-${site.site}`}>
-                        <td>{site.team}</td>
-                        <td>{site.site}</td>
-                        <td>{site.plants}</td>
-                        <td>{site.roundWins}</td>
-                        <td>{pct(site.winRate)}</td>
-                        <td>{pct(site.postPlantWinRate)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          )}
-        </article>
-
-        {/* Utility */}
+      )
+    },
+    {
+      id: "utility",
+      label: "Utility",
+      content: (
         <article className="panel full">
           <div className="panel-head">
             <h2>Utility</h2>
             <span>granadas, dano e flashes</span>
           </div>
-          {utility.length === 0 ? (
-            <p className="state-note">Sem eventos de utility.</p>
-          ) : (
-            <div className="table-scroll">
-              <table className="stat-table">
-                <thead>
-                  <tr>
-                    <th>Jogador</th>
-                    <th>HE</th>
-                    <th>Flash</th>
-                    <th>Smoke</th>
-                    <th>Molotov</th>
-                    <th>Decoy</th>
-                    <th>Total</th>
-                    <th>HE c/ dano</th>
-                    <th>Dano HE</th>
-                    <th>Dano molly</th>
-                    <th>Cegou inim.</th>
-                    <th>Tempo cegueira</th>
-                    <th>Flash assists</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {utility.map((player) => (
-                    <tr key={player.steamId}>
-                      <td>{player.name ?? player.steamId.slice(-5)}</td>
-                      <td>{player.grenadesThrown.he}</td>
-                      <td>{player.grenadesThrown.flash}</td>
-                      <td>{player.grenadesThrown.smoke}</td>
-                      <td>{player.grenadesThrown.molotov}</td>
-                      <td>{player.grenadesThrown.decoy}</td>
-                      <td>{player.grenadesThrown.total}</td>
-                      <td>{player.heWithDamage}</td>
-                      <td>{player.heDamageTotal}</td>
-                      <td>{player.molotovDamageTotal}</td>
-                      <td>{player.enemiesBlinded}</td>
-                      <td>{player.enemyBlindTime.toFixed(1)}s</td>
-                      <td>{player.flashAssists}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <DataTable
+            columns={utilityColumns}
+            rows={utility}
+            getRowKey={(u) => u.steamId}
+            initialSort={{ key: "total", dir: "desc" }}
+            stickyFirst
+            emptyLabel="Sem eventos de utility."
+          />
         </article>
-
-        {/* Kill matrix */}
+      )
+    },
+    {
+      id: "duels",
+      label: "Duelos",
+      content: (
         <article className="panel full">
           <div className="panel-head">
             <h2>Kill matrix</h2>
@@ -310,7 +326,9 @@ export function MatchReport({ matchId }: { matchId: string }) {
                         const kills = killLookup.get(`${attacker}|${victim}`) ?? 0;
                         return (
                           <td
-                            className={attacker === victim ? "matrix-self" : kills > 0 ? "matrix-hit" : ""}
+                            className={
+                              attacker === victim ? "matrix-self" : kills > 0 ? "matrix-hit" : ""
+                            }
                             key={victim}
                           >
                             {attacker === victim ? "—" : kills}
@@ -324,8 +342,12 @@ export function MatchReport({ matchId }: { matchId: string }) {
             </div>
           )}
         </article>
-
-        {/* Armas por player */}
+      )
+    },
+    {
+      id: "weapons",
+      label: "Armas",
+      content: (
         <article className="panel full">
           <div className="panel-head">
             <h2>Armas por jogador</h2>
@@ -336,7 +358,7 @@ export function MatchReport({ matchId }: { matchId: string }) {
           ) : (
             <div className="weapons-grid">
               {weapons.map((player) => (
-                <div className="weapon-card" key={player.steamId}>
+                <div className="weapon-card" key={weaponPlayerKey(player)}>
                   <div className="weapon-card-head">
                     <strong>{player.name ?? player.steamId.slice(-5)}</strong>
                     <div className="weapon-overall">
@@ -346,48 +368,78 @@ export function MatchReport({ matchId }: { matchId: string }) {
                       <span>1º tiro {pct(player.overall.firstShotAccuracy)}</span>
                     </div>
                   </div>
-                  {player.weapons.length === 0 ? (
-                    <p className="state-note">Sem disparos.</p>
-                  ) : (
-                    <div className="table-scroll">
-                      <table className="stat-table">
-                        <thead>
-                          <tr>
-                            <th>Arma</th>
-                            <th>Disparos</th>
-                            <th>Hits</th>
-                            <th>Acc</th>
-                            <th>Kills</th>
-                            <th>HS</th>
-                            <th>HS%</th>
-                            <th>Dano</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {[...player.weapons]
-                            .sort((a, b) => b.kills - a.kills)
-                            .map((weapon) => (
-                              <tr key={weapon.weapon}>
-                                <td>{weapon.weapon}</td>
-                                <td>{weapon.shots}</td>
-                                <td>{weapon.hits}</td>
-                                <td>{pct(weapon.accuracy)}</td>
-                                <td>{weapon.kills}</td>
-                                <td>{weapon.headshots}</td>
-                                <td>{pct(weapon.hsPct)}</td>
-                                <td>{weapon.damage}</td>
-                              </tr>
-                            ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
+                  <DataTable
+                    columns={weaponColumns}
+                    rows={player.weapons}
+                    getRowKey={(w) => `${player.steamId}-${w.weapon}`}
+                    initialSort={{ key: "kills", dir: "desc" }}
+                    emptyLabel="Sem disparos."
+                  />
                 </div>
               ))}
             </div>
           )}
         </article>
-      </section>
+      )
+    },
+    {
+      id: "bombsites",
+      label: "Bombsites",
+      content: (
+        <section className="surface-grid">
+          <article className="panel half">
+            <div className="panel-head">
+              <h2>Win rate por bombsite</h2>
+              <span>A vs B</span>
+            </div>
+            {bombsiteChart.length === 0 ? (
+              <p className="state-note">Sem plants registrados.</p>
+            ) : (
+              <BarChart data={bombsiteChart} max={100} />
+            )}
+          </article>
+          <article className="panel half">
+            <div className="panel-head">
+              <h2>Detalhe por site</h2>
+              <span>plants · wins · win rate</span>
+            </div>
+            <DataTable
+              columns={bombsiteColumns}
+              rows={bombsites}
+              getRowKey={(b) => `${b.team}-${b.site}`}
+              initialSort={{ key: "winRate", dir: "desc" }}
+              emptyLabel="Sem plants registrados."
+            />
+          </article>
+        </section>
+      )
+    }
+  ];
+
+  return (
+    <>
+      <PageHeader
+        eyebrow="Match report"
+        title={`${summary.teamA ?? "Time A"} x ${summary.teamB ?? "Time B"}`}
+        description={`Mapa ${summary.map} · ${summary.roundsCount} rounds · ${summary.playersCount} jogadores.`}
+      />
+
+      <article className="panel full scoreboard">
+        <div className="score-team" data-team="a">
+          <span>{summary.teamA ?? "Time A"}</span>
+          <strong>{summary.score.teamA ?? 0}</strong>
+        </div>
+        <div className="score-meta">
+          <span className="mono">{summary.map}</span>
+          <small>placar final</small>
+        </div>
+        <div className="score-team" data-team="b">
+          <span>{summary.teamB ?? "Time B"}</span>
+          <strong>{summary.score.teamB ?? 0}</strong>
+        </div>
+      </article>
+
+      <Tabs items={tabs} />
     </>
   );
 }

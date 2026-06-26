@@ -606,6 +606,182 @@ h2 {
   line-height: 1.5;
 }
 
+/* Tabs */
+.tablist {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 18px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(12, 18, 32, 0.92);
+  backdrop-filter: blur(12px);
+}
+
+.tab {
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted-strong);
+  padding: 8px 14px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 150ms ease,
+    color 150ms ease,
+    border-color 150ms ease;
+}
+
+.tab:hover {
+  color: var(--text);
+}
+
+.tab[data-active="true"] {
+  border-color: rgba(61, 214, 163, 0.4);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+/* DataTable */
+.data-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.86rem;
+}
+
+.data-table th,
+.data-table td {
+  border-bottom: 1px solid var(--line);
+  padding: 9px 12px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.data-table th[data-align="right"],
+.data-table td[data-align="right"] {
+  text-align: right;
+}
+
+.data-table th[data-align="center"],
+.data-table td[data-align="center"] {
+  text-align: center;
+}
+
+.data-table td[data-numeric="true"] {
+  font-variant-numeric: tabular-nums;
+}
+
+.data-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--panel-strong);
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.data-table tbody tr:nth-child(even) {
+  background: rgba(148, 163, 184, 0.04);
+}
+
+.data-table tbody tr:hover {
+  background: rgba(61, 214, 163, 0.08);
+}
+
+.data-table[data-sticky-first="true"] th:first-child,
+.data-table[data-sticky-first="true"] td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--panel);
+}
+
+.data-table[data-sticky-first="true"] thead th:first-child {
+  z-index: 3;
+  background: var(--panel-strong);
+}
+
+.th-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+
+.th-sort:hover {
+  color: var(--text);
+}
+
+.sort-ind {
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  opacity: 0.35;
+  border-top: 5px solid currentColor;
+}
+
+.th-sort[data-dir="asc"] .sort-ind {
+  opacity: 1;
+  border-top: 0;
+  border-bottom: 5px solid var(--accent-strong);
+}
+
+.th-sort[data-dir="desc"] .sort-ind {
+  opacity: 1;
+  border-top: 5px solid var(--accent-strong);
+}
+
+.data-empty {
+  padding: 22px 12px !important;
+  color: var(--muted);
+  text-align: center !important;
+}
+
+.cell-player {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.team-chip {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.team-chip[data-team="a"] {
+  border-color: rgba(61, 214, 163, 0.4);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.team-chip[data-team="b"] {
+  border-color: rgba(110, 168, 255, 0.4);
+  background: rgba(110, 168, 255, 0.14);
+  color: #a8c5ff;
+}
+
 /* Match report */
 .scoreboard {
   display: grid;
