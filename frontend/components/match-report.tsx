@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import { BarChart } from "@/components/bar-chart";
 import { type Column, DataTable } from "@/components/data-table";
 import { PageHeader } from "@/components/page-header";
@@ -32,6 +34,7 @@ export function MatchReport({ matchId }: { matchId: string }) {
   const matchupsQuery = useMatchupsQuery(matchId);
   const weaponsQuery = useWeaponStatsQuery(matchId);
   const bombsitesQuery = useBombsiteStatsQuery(matchId);
+  const [duelPlayer, setDuelPlayer] = useState("");
 
   if (summaryQuery.isLoading) {
     return (
@@ -77,6 +80,39 @@ export function MatchReport({ matchId }: { matchId: string }) {
   for (const entry of matchupsQuery.data?.matrix ?? []) {
     killLookup.set(`${entry.attackerSteamId}|${entry.victimSteamId}`, entry.kills);
   }
+
+  // Duelos por jogador: escolhe-se um player e vê-se o confronto direto (a favor /
+  // contra) contra cada ADVERSÁRIO. Comparar colegas de time não faz sentido, então
+  // filtramos pelo time (quando conhecido).
+  const teamBySteam = new Map<string, string | null>();
+  for (const player of playerStats) {
+    teamBySteam.set(player.steamId, player.team ?? null);
+  }
+  const duelOptions = matrixPlayers
+    .map((steamId) => ({ steamId, name: label(steamId), team: teamBySteam.get(steamId) ?? null }))
+    .sort((a, b) => (a.team ?? "").localeCompare(b.team ?? "") || a.name.localeCompare(b.name));
+  const selectedDuelPlayer = duelPlayer || duelOptions[0]?.steamId || "";
+  const selectedTeam = teamBySteam.get(selectedDuelPlayer) ?? null;
+  const duels = matrixPlayers
+    .filter((opp) => opp !== selectedDuelPlayer)
+    .filter((opp) => {
+      const oppTeam = teamBySteam.get(opp) ?? null;
+      // só adversários quando há time conhecido dos dois; senão mostra todos.
+      return selectedTeam && oppTeam ? oppTeam !== selectedTeam : true;
+    })
+    .map((opp) => {
+      const kills = killLookup.get(`${selectedDuelPlayer}|${opp}`) ?? 0;
+      const deaths = killLookup.get(`${opp}|${selectedDuelPlayer}`) ?? 0;
+      return { opp, kills, deaths, diff: kills - deaths };
+    })
+    .sort((a, b) => b.diff - a.diff || b.kills + b.deaths - (a.kills + a.deaths));
+  const duelTotals = duels.reduce(
+    (acc, duel) => ({ kills: acc.kills + duel.kills, deaths: acc.deaths + duel.deaths }),
+    { kills: 0, deaths: 0 }
+  );
+  const duelBalance = duelTotals.kills - duelTotals.deaths;
+  const fmtDiff = (value: number) => (value > 0 ? `+${value}` : `${value}`);
+  const posAttr = (value: number) => (value > 0 ? "true" : value < 0 ? "false" : undefined);
 
   const killsChart = [...playerStats]
     .sort((a, b) => b.kills - a.kills)
@@ -302,44 +338,66 @@ export function MatchReport({ matchId }: { matchId: string }) {
       content: (
         <article className="panel full">
           <div className="panel-head">
-            <h2>Kill matrix</h2>
-            <span>linha matou coluna</span>
+            <h2>Duelos</h2>
+            <span>confronto direto contra cada adversário</span>
           </div>
-          {matrixPlayers.length === 0 ? (
+          {duelOptions.length === 0 ? (
             <p className="state-note">Sem confrontos registrados.</p>
           ) : (
-            <div className="table-scroll">
-              <table className="stat-table kill-matrix">
-                <thead>
-                  <tr>
-                    <th>↓ mata · → morre</th>
-                    {matrixPlayers.map((victim) => (
-                      <th key={victim}>{label(victim)}</th>
+            <>
+              <div className="duel-controls">
+                <label className="duel-field">
+                  Jogador
+                  <select
+                    value={selectedDuelPlayer}
+                    onChange={(event) => setDuelPlayer(event.target.value)}
+                  >
+                    {duelOptions.map((option) => (
+                      <option key={option.steamId} value={option.steamId}>
+                        {option.name}
+                      </option>
                     ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {matrixPlayers.map((attacker) => (
-                    <tr key={attacker}>
-                      <th scope="row">{label(attacker)}</th>
-                      {matrixPlayers.map((victim) => {
-                        const kills = killLookup.get(`${attacker}|${victim}`) ?? 0;
-                        return (
-                          <td
-                            className={
-                              attacker === victim ? "matrix-self" : kills > 0 ? "matrix-hit" : ""
-                            }
-                            key={victim}
-                          >
-                            {attacker === victim ? "—" : kills}
-                          </td>
-                        );
-                      })}
+                  </select>
+                </label>
+                <div className="duel-totals">
+                  <span className="duel-kpi">
+                    <strong>{duelTotals.kills}</strong> a favor
+                  </span>
+                  <span className="duel-kpi">
+                    <strong>{duelTotals.deaths}</strong> contra
+                  </span>
+                  <span className="duel-kpi" data-pos={posAttr(duelBalance)}>
+                    <strong>{fmtDiff(duelBalance)}</strong> saldo
+                  </span>
+                </div>
+              </div>
+              {duels.length === 0 ? (
+                <p className="state-note">Sem confrontos deste jogador contra adversários.</p>
+              ) : (
+                <table className="stat-table duel-table">
+                  <thead>
+                    <tr>
+                      <th>Oponente</th>
+                      <th>A favor</th>
+                      <th>Contra</th>
+                      <th>Saldo</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {duels.map((duel) => (
+                      <tr key={duel.opp}>
+                        <th scope="row">{label(duel.opp)}</th>
+                        <td>{duel.kills}</td>
+                        <td>{duel.deaths}</td>
+                        <td className="duel-diff" data-pos={posAttr(duel.diff)}>
+                          {fmtDiff(duel.diff)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </>
           )}
         </article>
       )
