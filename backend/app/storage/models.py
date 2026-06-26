@@ -9,7 +9,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import BigInteger, ForeignKey, Integer, Text
+from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, Text
 from sqlalchemy import Uuid as SAUuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
@@ -25,9 +25,9 @@ class Demo(Base):
     path: Mapped[str] = mapped_column(Text, nullable=False)
     status: Mapped[str] = mapped_column(Text, nullable=False, default="pending")
     created_at: Mapped[datetime] = mapped_column(
-        nullable=False, server_default=func.now()
+        DateTime(timezone=True), nullable=False, server_default=func.now()
     )
-    parsed_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    parsed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     matches: Mapped[list[Match]] = relationship(back_populates="demo")
@@ -45,7 +45,7 @@ class Match(Base):
     team_b: Mapped[str | None] = mapped_column(Text, nullable=True)
     score_a: Mapped[int | None] = mapped_column(Integer, nullable=True)
     score_b: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    started_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     tick_rate: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     demo: Mapped[Demo] = relationship(back_populates="matches")

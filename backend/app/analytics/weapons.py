@@ -5,11 +5,9 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import Any
 
+from app.analytics.metrics import first_shot_stats
+from app.analytics.metrics import ratio as _ratio
 from app.analytics.reader import read_tables
-
-
-def _ratio(num: float, den: float) -> float:
-    return round(num / den, 4) if den else 0.0
 
 
 def build_weapons(match_id: str) -> dict[str, Any]:
@@ -32,6 +30,9 @@ def build_weapons(match_id: str) -> dict[str, Any]:
         if row.get("headshot"):
             headshots[key] += 1
 
+    # first-shot accuracy (heurística por rajada) por (steam_id, weapon).
+    first_shots = first_shot_stats(tables["shots"], tables["damages"])
+
     payload_players = []
     for player in tables["players"]:
         steam_id = player["steam_id"]
@@ -44,6 +45,7 @@ def build_weapons(match_id: str) -> dict[str, Any]:
         )
         weapon_rows = []
         total_shots = total_hits = total_damage = total_kills = total_hs = 0
+        total_bursts = total_first_hits = 0
         for weapon in weapons:
             key = (steam_id, weapon)
             weapon_shots = shots[key]
@@ -51,11 +53,14 @@ def build_weapons(match_id: str) -> dict[str, Any]:
             weapon_damage = damage[key]
             weapon_kills = kills[key]
             weapon_hs = headshots[key]
+            burst = first_shots.get(key, {"bursts": 0, "first_hits": 0})
             total_shots += weapon_shots
             total_hits += weapon_hits
             total_damage += weapon_damage
             total_kills += weapon_kills
             total_hs += weapon_hs
+            total_bursts += burst["bursts"]
+            total_first_hits += burst["first_hits"]
             weapon_rows.append(
                 {
                     "weapon": weapon,
@@ -67,7 +72,7 @@ def build_weapons(match_id: str) -> dict[str, Any]:
                     "hs_pct": _ratio(weapon_hs, weapon_kills),
                     "damage": weapon_damage,
                     "damage_per_shot": _ratio(weapon_damage, weapon_shots),
-                    "first_shot_accuracy": _ratio(weapon_hits, weapon_shots),
+                    "first_shot_accuracy": _ratio(burst["first_hits"], burst["bursts"]),
                 }
             )
         payload_players.append(
@@ -79,7 +84,7 @@ def build_weapons(match_id: str) -> dict[str, Any]:
                     "hs_pct": _ratio(total_hs, total_kills),
                     "accuracy": _ratio(total_hits, total_shots),
                     "damage_per_shot": _ratio(total_damage, total_shots),
-                    "first_shot_accuracy": _ratio(total_hits, total_shots),
+                    "first_shot_accuracy": _ratio(total_first_hits, total_bursts),
                 },
                 "weapons": weapon_rows,
             }

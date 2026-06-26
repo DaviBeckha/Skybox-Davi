@@ -5,11 +5,9 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import Any
 
+from app.analytics.metrics import count_clutches, count_trade_kills
+from app.analytics.metrics import ratio as _ratio
 from app.analytics.reader import read_tables
-
-
-def _ratio(num: float, den: float) -> float:
-    return round(num / den, 4) if den else 0.0
 
 
 def build_player_stats(match_id: str) -> dict[str, Any]:
@@ -17,6 +15,8 @@ def build_player_stats(match_id: str) -> dict[str, Any]:
     players = tables["players"]
     rounds = tables["rounds"]
     round_count = max(1, len(rounds))
+    trade_kills = count_trade_kills(tables["kills"])
+    clutches = count_clutches(tables["kills"], rounds, players)
     kills_by_player: dict[str, list[dict]] = defaultdict(list)
     deaths_by_player: dict[str, list[dict]] = defaultdict(list)
     damage_by_player: dict[str, int] = defaultdict(int)
@@ -65,8 +65,8 @@ def build_player_stats(match_id: str) -> dict[str, Any]:
                 "entry_deaths": sum(
                     1 for row in entry_attempts if row["victim_steam_id"] == steam_id
                 ),
-                "trade_kills": 0,
-                "clutches": 0,
+                "trade_kills": trade_kills.get(steam_id, 0),
+                "clutches": clutches.get(steam_id, 0),
             }
         )
     return {"match_id": match_id, "players": payload_players}

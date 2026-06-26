@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from app.analytics.map_projection import RadarMetadata, world_to_radar
+from app.analytics.metrics import in_round_range, parse_round_range
 from app.analytics.reader import read_tables
 
 
@@ -23,6 +24,7 @@ def build_heatmap(
 ) -> dict[str, Any]:
     tables = read_tables(match_id, "kills", "ticks", "grenades", "players")
     team_by_player = {row["steam_id"]: row.get("team") for row in tables["players"]}
+    rounds = parse_round_range(round_range)
     points: list[dict[str, Any]] = []
 
     if heatmap_type == "kills":
@@ -33,6 +35,8 @@ def build_heatmap(
                 continue
             if weapon and row["weapon"] != weapon:
                 continue
+            if not in_round_range(row["round_number"], rounds):
+                continue
             points.append(_point(row["attacker_x"], row["attacker_y"], metadata))
     elif heatmap_type == "deaths":
         for row in tables["kills"]:
@@ -42,12 +46,16 @@ def build_heatmap(
                 continue
             if weapon and row["weapon"] != weapon:
                 continue
+            if not in_round_range(row["round_number"], rounds):
+                continue
             points.append(_point(row["victim_x"], row["victim_y"], metadata))
     elif heatmap_type == "path":
         for row in tables["ticks"]:
             if player and row["steam_id"] != player:
                 continue
             if side and row["side"] != side:
+                continue
+            if not in_round_range(row["round_number"], rounds):
                 continue
             points.append(_point(row["x"], row["y"], metadata))
     elif heatmap_type in {"utility", "grenades"}:
@@ -57,6 +65,8 @@ def build_heatmap(
             if side and row["thrower_side"] != side:
                 continue
             if grenade_type and row["grenade_type"] != grenade_type:
+                continue
+            if not in_round_range(row["round_number"], rounds):
                 continue
             points.append(_point(row["x"], row["y"], metadata))
     else:

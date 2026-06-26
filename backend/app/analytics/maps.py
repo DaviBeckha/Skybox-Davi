@@ -1,8 +1,17 @@
-"""Assets locais de mapa: metadata de overview e imagens de radar."""
+"""Assets locais de mapa: metadata de overview e imagens de radar.
+
+A imagem de radar real (overview do CS2) é um asset externo. Quando um arquivo
+`data/maps/radars/<map>.png` real existe, ele é servido como está. Caso
+contrário, geramos um **placeholder do tamanho correto** (a partir do
+`image_width`/`image_height` do metadata) para que o frontend tenha um canvas
+nas dimensões certas — basta dropar o overview real no diretório para substituí-lo.
+"""
 
 from __future__ import annotations
 
 import json
+import struct
+import zlib
 from pathlib import Path
 from typing import Any
 
@@ -23,10 +32,56 @@ DEFAULT_MAP_METADATA: dict[str, RadarMetadata] = {
     }
 }
 
-_PNG_1X1 = bytes.fromhex(
-    "89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489"
-    "0000000d49444154789c6360f8ffff3f0005fe02fea73581e40000000049454e44ae426082"
-)
+# Cache de placeholders renderizados por (width, height).
+_placeholder_cache: dict[tuple[int, int], bytes] = {}
+
+
+def _png_chunk(chunk_type: bytes, data: bytes) -> bytes:
+    return (
+        struct.pack(">I", len(data))
+        + chunk_type
+        + data
+        + struct.pack(">I", zlib.crc32(chunk_type + data) & 0xFFFFFFFF)
+    )
+
+
+def _render_placeholder_png(width: int, height: int) -> bytes:
+    """Gera um PNG RGB do tamanho pedido (fundo escuro + grid), só com stdlib."""
+    cached = _placeholder_cache.get((width, height))
+    if cached is not None:
+        return cached
+
+    background = bytes((24, 28, 34))
+    grid = bytes((45, 52, 64))
+    step = 128
+    normal_line = bytearray([0])  # filtro 0
+    for x in range(width):
+        normal_line += grid if x % step == 0 else background
+    grid_line = bytes([0]) + grid * width
+
+    raw = bytearray()
+    for y in range(height):
+        raw += grid_line if y % step == 0 else normal_line
+
+    ihdr = struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0)
+    png = (
+        b"\x89PNG\r\n\x1a\n"
+        + _png_chunk(b"IHDR", ihdr)
+        + _png_chunk(b"IDAT", zlib.compress(bytes(raw), 9))
+        + _png_chunk(b"IEND", b"")
+    )
+    _placeholder_cache[(width, height)] = png
+    return png
+
+
+def _placeholder_for(map_name: str) -> bytes:
+    try:
+        metadata = load_metadata(map_name)
+        width = int(metadata.get("image_width") or 1024)
+        height = int(metadata.get("image_height") or 1024)
+    except (FileNotFoundError, KeyError, TypeError, ValueError):
+        width = height = 1024
+    return _render_placeholder_png(width, height)
 
 
 def ensure_default_assets() -> None:
@@ -41,7 +96,9 @@ def ensure_default_assets() -> None:
             )
         radar_path = paths.MAPS_RADARS_DIR / f"{map_name}.png"
         if not radar_path.exists():
-            radar_path.write_bytes(_PNG_1X1)
+            width = int(metadata.get("image_width") or 1024)
+            height = int(metadata.get("image_height") or 1024)
+            radar_path.write_bytes(_render_placeholder_png(width, height))
 
 
 def list_maps() -> list[RadarMetadata]:
@@ -82,7 +139,9 @@ def radar_path(map_name: str) -> Path:
     ensure_default_assets()
     candidate = paths.MAPS_RADARS_DIR / f"{map_name}.png"
     if not candidate.exists():
-        if map_name not in DEFAULT_MAP_METADATA:
+        if map_name not in DEFAULT_MAP_METADATA and not (
+            paths.MAPS_RADAR_INFO_DIR / f"{map_name}.json"
+        ).exists():
             raise FileNotFoundError(map_name)
-        candidate.write_bytes(_PNG_1X1)
+        candidate.write_bytes(_placeholder_for(map_name))
     return candidate

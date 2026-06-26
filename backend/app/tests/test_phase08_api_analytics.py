@@ -139,11 +139,18 @@ def test_stats_endpoints_return_contract_shapes(client, processed_match) -> None
     assert player_stats.status_code == 200
     first = player_stats.json()["players"][0]
     assert {"steam_id", "kills", "deaths", "adr", "kast_pct"} <= set(first)
+    # trade_kills/clutches são métricas reais (inteiros), não mais stubs fixos.
+    assert isinstance(first["trade_kills"], int)
+    assert isinstance(first["clutches"], int)
 
     utility = client.get(f"/matches/{match_id}/stats/utility")
     assert utility.status_code == 200
     utility_player = utility.json()["players"][0]
     assert utility_player["grenades_thrown"]["total"] > 0
+    # grenades_thrown segue exatamente as chaves do contrato (incendiary agrupado em molotov).
+    assert set(utility_player["grenades_thrown"]) == {
+        "he", "flash", "smoke", "molotov", "decoy", "total",
+    }
     assert "enemy_blind_time" in utility_player
 
     matchups = client.get(f"/matches/{match_id}/stats/matchups")
@@ -159,7 +166,9 @@ def test_stats_endpoints_return_contract_shapes(client, processed_match) -> None
 
     bombsites = client.get(f"/matches/{match_id}/stats/bombsites")
     assert bombsites.status_code == 200
-    assert bombsites.json()["sites"][0]["site"] == "A"
+    site = bombsites.json()["sites"][0]
+    assert site["site"] == "A"
+    assert {"win_rate", "post_plant_win_rate"} <= set(site)
 
 
 def test_weapons_economy_replay_and_heatmaps(client, processed_match) -> None:
@@ -170,7 +179,9 @@ def test_weapons_economy_replay_and_heatmaps(client, processed_match) -> None:
     assert weapons.status_code == 200
     weapon_player = weapons.json()["players"][0]
     assert weapon_player["overall"]["damage_per_shot"] >= 0
+    assert "first_shot_accuracy" in weapon_player["overall"]
     assert weapon_player["weapons"][0]["shots"] > 0
+    assert "first_shot_accuracy" in weapon_player["weapons"][0]
 
     economy = client.get(f"/matches/{match_id}/stats/economy")
     assert economy.status_code == 200
@@ -193,3 +204,10 @@ def test_weapons_economy_replay_and_heatmaps(client, processed_match) -> None:
         assert payload["type"] == heatmap_type
         assert payload["points"]
         assert "radar_x" in payload["points"][0]
+
+    # round_range realmente filtra (não é só ecoado em filters_applied).
+    full = client.get(f"/matches/{match_id}/heatmap?type=kills")
+    one_round = client.get(f"/matches/{match_id}/heatmap?type=kills&round_range=1-1")
+    assert one_round.status_code == 200
+    assert one_round.json()["filters_applied"]["round_range"] == "1-1"
+    assert 0 < len(one_round.json()["points"]) < len(full.json()["points"])

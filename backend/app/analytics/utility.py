@@ -7,7 +7,10 @@ from typing import Any
 
 from app.analytics.reader import read_tables
 
-_GRENADE_TYPES = ("he", "flash", "smoke", "molotov", "incendiary", "decoy")
+# Chaves do payload (contrato seção 4). `incendiary` é agrupado em `molotov`
+# (ambos são granadas de fogo; o dano de fogo também é somado em molotov).
+_GRENADE_KEYS = ("he", "flash", "smoke", "molotov", "decoy")
+_TYPE_ALIASES = {"incendiary": "molotov"}
 
 
 def build_utility(match_id: str) -> dict[str, Any]:
@@ -17,7 +20,7 @@ def build_utility(match_id: str) -> dict[str, Any]:
         by_player[player["steam_id"]] = {
             "steam_id": player["steam_id"],
             "name": player.get("name"),
-            "grenades_thrown": {key: 0 for key in (*_GRENADE_TYPES, "total")},
+            "grenades_thrown": {key: 0 for key in (*_GRENADE_KEYS, "total")},
             "he_with_damage": 0,
             "he_damage_total": 0,
             "molotov_damage_total": 0,
@@ -36,8 +39,9 @@ def build_utility(match_id: str) -> dict[str, Any]:
         if steam_id not in by_player:
             continue
         grenade_type = grenade.get("grenade_type")
-        if grenade_type in _GRENADE_TYPES:
-            by_player[steam_id]["grenades_thrown"][grenade_type] += 1
+        key = _TYPE_ALIASES.get(grenade_type, grenade_type)
+        if key in _GRENADE_KEYS:
+            by_player[steam_id]["grenades_thrown"][key] += 1
             by_player[steam_id]["grenades_thrown"]["total"] += 1
         if grenade_type == "flash":
             by_player[steam_id]["flashes_thrown"] += 1

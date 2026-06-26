@@ -205,6 +205,29 @@ def parse_demo(
                 "z": as_float(value(row, "z", "Z"), 0.0),
             },
         )
+        # weapon_fire de granada => também emite o evento `thrown` (contrato §2).
+        grenade_type = WEAPON_TO_GRENADE.get(
+            (as_str(value(row, "weapon", "weapon_name"), "") or "").replace("weapon_", "")
+        )
+        if grenade_type is not None:
+            append_canonical(
+                tables,
+                "grenades",
+                {
+                    "match_id": match_id,
+                    "round_number": round_number(row),
+                    "tick": as_int(value(row, "tick"), 0),
+                    "time": tick_time(row, 0, tick_rate),
+                    "thrower_steam_id": as_str(value(row, "steam_id", "user_steamid"), ""),
+                    "thrower_side": as_str(value(row, "thrower_side"), ""),
+                    "grenade_type": grenade_type,
+                    "event": "thrown",
+                    "x": as_float(value(row, "x", "X")),
+                    "y": as_float(value(row, "y", "Y")),
+                    "z": as_float(value(row, "z", "Z")),
+                    "entity_id": as_int(value(row, "entity_id", "entityid")),
+                },
+            )
 
     for event_name, event_value in (
         ("bomb_planted", "plant"),
@@ -233,7 +256,8 @@ def parse_demo(
         ("hegrenade_detonate", "he"),
         ("flashbang_detonate", "flash"),
         ("smokegrenade_detonate", "smoke"),
-        ("molotov_detonate", "molotov"),
+        # `inferno_startburn` cobre molotov/incendiária; usar `molotov_detonate`
+        # junto duplicaria o evento de detonação de fogo.
         ("inferno_startburn", "molotov"),
         ("decoy_detonate", "decoy"),
     ):
