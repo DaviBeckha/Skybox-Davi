@@ -19,7 +19,7 @@
 | 09 | Frontend base | 04 | [x] |
 | 10 | Dashboard | 08, 09 | [x] |
 | 11 | Demos UI | 05, 09 | [x] |
-| 12 | Match Report | 08, 09 | [ ] |
+| 12 | Match Report | 08, 09 | [x] |
 | 13 | Replay 2D | 08, 09 | [ ] |
 | 14 | Heatmaps | 08, 09 | [ ] |
 | 15 | Playbook privado | 09 | [ ] |
@@ -122,17 +122,17 @@
 - [x] Erro de parsing é exibido de forma clara.
 - [x] `npm run lint` e `npm run build` passam.
 
-## Phase 12 — Match Report
+## Phase 12 — Match Report ✅
 
-- [ ] Placar, mapa, times e rounds exibidos corretamente.
-- [ ] Tabela de jogadores mostra KD, ADR, KAST-like, entry/trade/clutch e por arma.
-- [ ] Tabela de utility mostra granadas por tipo, HE/molly dano, flashes que cegaram e flash assists.
-- [ ] Kill matrix mostra quantas vezes cada player morreu para cada adversário.
-- [ ] Sucesso por bombsite mostra a win rate de round por site/time (A vs B).
-- [ ] Tabela de armas por player mostra armas usadas, disparos, accuracy e kills por arma.
-- [ ] Pelo menos um gráfico simples renderiza.
-- [ ] Estados de loading/erro tratados.
-- [ ] `npm run lint` e `npm run build` passam.
+- [x] Placar, mapa, times e rounds exibidos corretamente.
+- [x] Tabela de jogadores mostra KD, ADR, KAST-like, entry/trade/clutch (armas em seção própria).
+- [x] Tabela de utility mostra granadas por tipo, HE/molly dano, flashes que cegaram e flash assists.
+- [x] Kill matrix mostra quantas vezes cada player morreu para cada adversário.
+- [x] Sucesso por bombsite mostra a win rate de round por site/time (A vs B) com gráfico.
+- [x] Tabela de armas por player mostra armas usadas, disparos, accuracy e kills por arma.
+- [x] Pelo menos um gráfico simples renderiza (barras CSS, sem dependência extra).
+- [x] Estados de loading/erro tratados.
+- [x] `npm run lint` e `npm run build` passam.
 
 ## Phase 13 — Replay 2D
 

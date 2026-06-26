@@ -45,7 +45,7 @@ Cada phase é **auto-contida** — pode ser colada como prompt mesmo sem o `cont
 | 09 | [Frontend base](09-frontend-base.md)        | 04         | [x]    |
 | 10 | [Dashboard](10-dashboard.md)                | 08, 09     | [x]    |
 | 11 | [Demos UI](11-demos-ui.md)                  | 05, 09     | [x]    |
-| 12 | [Match Report](12-match-report.md)          | 08, 09     | [ ]    |
+| 12 | [Match Report](12-match-report.md)          | 08, 09     | [x]    |
 | 13 | [Replay 2D](13-replay-2d.md)                | 08, 09     | [ ]    |
 | 14 | [Heatmaps](14-heatmaps.md)                  | 08, 09     | [ ]    |
 | 15 | [Playbook privado](15-playbook.md)          | 09         | [ ]    |

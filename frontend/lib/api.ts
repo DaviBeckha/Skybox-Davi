@@ -11,6 +11,7 @@ import type {
   MatchSummary,
   MatchupPayload,
   Player,
+  PlayerStatsPayload,
   RadarMetadata,
   ReplayPayload,
   Round,
@@ -149,7 +150,8 @@ export function createApiClient(options: { baseUrl?: string; fetcher?: Fetcher }
           grenade_type: params.grenadeType
         }
       }),
-    getPlayerStats: (matchId: string) => request(`/matches/${matchId}/stats/player`),
+    getPlayerStats: (matchId: string) =>
+      request<PlayerStatsPayload>(`/matches/${matchId}/stats/player`),
     getEconomyStats: (matchId: string) =>
       request<EconomyPayload>(`/matches/${matchId}/stats/economy`),
     getWeaponStats: (matchId: string) =>

@@ -192,6 +192,27 @@ export type WeaponStatsPayload = {
   players: PlayerWeaponStats[];
 };
 
+export type PlayerCoreStats = {
+  steamId: string;
+  name: string | null;
+  team: string | null;
+  kills: number;
+  deaths: number;
+  assists: number;
+  adr: number;
+  kastPct: number;
+  entryAttempts: number;
+  entryKills: number;
+  entryDeaths: number;
+  tradeKills: number;
+  clutches: number;
+};
+
+export type PlayerStatsPayload = {
+  matchId: UUID;
+  players: PlayerCoreStats[];
+};
+
 export type Matchup = {
   attackerSteamId: string;
   victimSteamId: string;
