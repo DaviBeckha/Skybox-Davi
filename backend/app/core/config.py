@@ -2,10 +2,13 @@
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from app.core.paths import REPO_ROOT
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
+        # .env na raiz do projeto (onde está o .env.example), independente do cwd.
+        env_file=(REPO_ROOT / ".env", ".env"),
         env_file_encoding="utf-8",
         extra="ignore",
     )
