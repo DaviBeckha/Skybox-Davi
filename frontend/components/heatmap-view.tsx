@@ -71,13 +71,71 @@ export function HeatmapView() {
   const imageHeight = metadataQuery.data?.imageHeight ?? 1024;
   const radarUrl = map ? `${DEFAULT_API_BASE_URL}/maps/${encodeURIComponent(map)}/radar` : "";
 
-  const points = deathsMode
-    ? (deathQuery.data?.deaths ?? []).map((death) => ({ radarX: death.radarX, radarY: death.radarY }))
-    : (heatmapQuery.data?.points ?? []).map((point) => ({ radarX: point.radarX, radarY: point.radarY }));
-  const topSpot = deathsMode ? deathQuery.data?.topSpot ?? null : null;
+  const heatPoints = (heatmapQuery.data?.points ?? []).map((point) => ({
+    radarX: point.radarX,
+    radarY: point.radarY
+  }));
+  const rawDeaths = deathQuery.data?.deaths ?? [];
 
   const isLoading = deathsMode ? deathQuery.isLoading : heatmapQuery.isLoading;
   const isError = deathsMode ? deathQuery.isError : heatmapQuery.isError;
+
+  const nameOf = (steamId: string) =>
+    players.find((item) => item.steamId === steamId)?.name ?? steamId.slice(-5);
+
+  type DeathCluster = {
+    key: string;
+    radarX: number;
+    radarY: number;
+    count: number;
+    attackers: { label: string; count: number }[];
+    weapons: { label: string; count: number }[];
+    rounds: number[];
+  };
+
+  // Deaths + player: agrupamos as mortes na mesma grade de 128u que o backend usa
+  // no top spot, respondendo "quantas vezes morreu aqui" e "quem matou".
+  const deathClusters: DeathCluster[] = !deathsMode
+    ? []
+    : (() => {
+        const groups = new Map<string, { rx: number; ry: number; deaths: typeof rawDeaths }>();
+        for (const death of rawDeaths) {
+          const key = `${Math.round(death.x / 128)},${Math.round(death.y / 128)}`;
+          const group = groups.get(key) ?? { rx: 0, ry: 0, deaths: [] };
+          group.rx += death.radarX;
+          group.ry += death.radarY;
+          group.deaths.push(death);
+          groups.set(key, group);
+        }
+        const tally = (items: string[]) => {
+          const counts = new Map<string, number>();
+          for (const item of items) counts.set(item, (counts.get(item) ?? 0) + 1);
+          return [...counts.entries()]
+            .map(([label, count]) => ({ label, count }))
+            .sort((a, b) => b.count - a.count);
+        };
+        return [...groups.entries()]
+          .map(([key, group]) => ({
+            key,
+            radarX: group.rx / group.deaths.length,
+            radarY: group.ry / group.deaths.length,
+            count: group.deaths.length,
+            attackers: tally(group.deaths.map((death) => nameOf(death.attackerSteamId))),
+            weapons: tally(group.deaths.map((death) => death.weapon)),
+            rounds: [...new Set(group.deaths.map((death) => death.roundNumber))].sort((a, b) => a - b)
+          }))
+          .sort((a, b) => b.count - a.count);
+      })();
+
+  const listText = (items: { label: string; count: number }[]) =>
+    items.map((item) => `${item.label}${item.count > 1 ? ` ×${item.count}` : ""}`).join(", ");
+  const clusterAria = (cluster: DeathCluster) =>
+    `Morreu ${cluster.count} ${cluster.count === 1 ? "vez" : "vezes"} aqui; ` +
+    `morto por ${listText(cluster.attackers)}; armas ${listText(cluster.weapons)}; ` +
+    `rounds ${cluster.rounds.join(", ")}`;
+  const clusterTitle = (cluster: DeathCluster) =>
+    `Morreu ${cluster.count}× aqui\nMorto por: ${listText(cluster.attackers)}\n` +
+    `Armas: ${listText(cluster.weapons)}\nRounds: ${cluster.rounds.join(", ")}`;
 
   return (
     <>
@@ -183,11 +241,31 @@ export function HeatmapView() {
               <p className="replay-overlay-note" role="alert">
                 Erro ao carregar. Verifique o backend.
               </p>
-            ) : points.length === 0 ? (
+            ) : deathsMode ? (
+              deathClusters.length === 0 ? (
+                <p className="replay-overlay-note">Este player não tem mortes registradas.</p>
+              ) : (
+                deathClusters.map((cluster, index) => (
+                  <span
+                    aria-label={clusterAria(cluster)}
+                    className="death-cluster"
+                    data-top={index === 0 ? "true" : undefined}
+                    key={cluster.key}
+                    style={{
+                      left: `${(cluster.radarX / imageWidth) * 100}%`,
+                      top: `${(cluster.radarY / imageHeight) * 100}%`
+                    }}
+                    title={clusterTitle(cluster)}
+                  >
+                    {cluster.count}
+                  </span>
+                ))
+              )
+            ) : heatPoints.length === 0 ? (
               <p className="replay-overlay-note">Sem pontos para os filtros atuais.</p>
             ) : (
               <>
-                {points.map((point, index) => (
+                {heatPoints.map((point, index) => (
                   <span
                     className="heat-point"
                     data-type={type}
@@ -198,49 +276,62 @@ export function HeatmapView() {
                     }}
                   />
                 ))}
-                {topSpot ? (
-                  <span
-                    className="heat-topspot"
-                    style={{
-                      left: `${(topSpot.radarX / imageWidth) * 100}%`,
-                      top: `${(topSpot.radarY / imageHeight) * 100}%`
-                    }}
-                    title={`Top spot · ${topSpot.count} mortes`}
-                  >
-                    <small>top spot ({topSpot.count})</small>
-                  </span>
-                ) : null}
               </>
             )}
           </div>
         </div>
 
         <aside className="replay-roster panel" aria-label="Resumo do heatmap">
-          <div className="roster-team">
-            <h3>Resumo</h3>
-            <ul className="data-list">
-              <li className="data-row">
-                <div className="data-main">
-                  <strong>{TYPES.find((option) => option.value === type)?.label}</strong>
-                  <small>{points.length} pontos</small>
-                </div>
-              </li>
-              {deathsMode ? (
+          {deathsMode ? (
+            <div className="roster-team">
+              <h3>Posições de morte</h3>
+              {deathClusters.length === 0 ? (
+                <p className="state-note">Sem mortes registradas para este player.</p>
+              ) : (
+                <>
+                  <p className="death-summary">
+                    <strong>{rawDeaths.length}</strong> mortes em{" "}
+                    <strong>{deathClusters.length}</strong>{" "}
+                    {deathClusters.length === 1 ? "posição" : "posições"}
+                  </p>
+                  <ol className="death-rank">
+                    {deathClusters.map((cluster, index) => (
+                      <li
+                        className="death-rank-row"
+                        data-top={index === 0 ? "true" : undefined}
+                        key={cluster.key}
+                      >
+                        <span className="death-rank-badge">{cluster.count}×</span>
+                        <div className="death-rank-main">
+                          <strong>{index === 0 ? "Top spot" : `Posição ${index + 1}`}</strong>
+                          <small>por {listText(cluster.attackers)}</small>
+                          <small className="death-rank-meta">
+                            {listText(cluster.weapons)} · rounds {cluster.rounds.join(", ")}
+                          </small>
+                        </div>
+                      </li>
+                    ))}
+                  </ol>
+                </>
+              )}
+            </div>
+          ) : (
+            <div className="roster-team">
+              <h3>Resumo</h3>
+              <ul className="data-list">
                 <li className="data-row">
                   <div className="data-main">
-                    <strong>Posições de morte</strong>
-                    <small>
-                      {topSpot ? `top spot: ${topSpot.count} mortes` : "sem cluster destacado"}
-                    </small>
+                    <strong>{TYPES.find((option) => option.value === type)?.label}</strong>
+                    <small>{heatPoints.length} pontos</small>
                   </div>
                 </li>
-              ) : null}
-            </ul>
-            <p className="state-note">
-              Para o mapa de movimento, escolha <strong>Pathing</strong> + um player. Para a posição
-              de morte #1, escolha <strong>Deaths</strong> + um player.
-            </p>
-          </div>
+              </ul>
+              <p className="state-note">
+                Para o mapa de movimento, escolha <strong>Pathing</strong> + um player. Para ver onde
+                um player morreu, escolha <strong>Deaths</strong> + um player.
+              </p>
+            </div>
+          )}
         </aside>
       </section>
     </>

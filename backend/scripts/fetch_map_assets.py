@@ -25,6 +25,25 @@ from app.core import paths
 _PREFIXES = ("de_", "cs_", "ar_")
 
 
+def _awpy_cli() -> str:
+    """Localiza o console script `awpy` (entry point `awpy.cli:awpy_cli`).
+
+    `python -m awpy` não funciona (o pacote não expõe `__main__`); o caminho
+    oficial em awpy 2.x é o console script instalado ao lado do interpretador.
+    """
+    found = shutil.which("awpy")
+    if found:
+        return found
+    scripts_dir = Path(sys.executable).parent
+    for candidate in ("awpy.exe", "awpy"):
+        exe = scripts_dir / candidate
+        if exe.exists():
+            return str(exe)
+    raise RuntimeError(
+        "Console script 'awpy' não encontrado. Rode `uv sync` ou instale awpy no venv."
+    )
+
+
 def _png_size(path: Path) -> tuple[int, int]:
     with path.open("rb") as handle:
         header = handle.read(24)
@@ -38,7 +57,7 @@ def main() -> int:
     maps_dir = Path(MAPS_DIR)
     if not maps_dir.exists() or not any(maps_dir.glob("*.png")):
         print("Baixando mapas via awpy (awpy get maps)...")
-        subprocess.run([sys.executable, "-m", "awpy", "get", "maps"], check=True)
+        subprocess.run([_awpy_cli(), "get", "maps"], check=True)
 
     map_data_path = maps_dir / "map-data.json"
     map_data: dict[str, dict] = {}

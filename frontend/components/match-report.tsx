@@ -238,6 +238,30 @@ export function MatchReport({ matchId }: { matchId: string }) {
     }
   ];
 
+  const duelColumns: Column<{ opp: string; kills: number; deaths: number; diff: number }>[] = [
+    {
+      key: "opp",
+      header: "Oponente",
+      sortable: true,
+      value: (d) => label(d.opp),
+      render: (d) => <strong>{label(d.opp)}</strong>
+    },
+    { key: "kills", header: "A favor", numeric: true, sortable: true, value: (d) => d.kills },
+    { key: "deaths", header: "Contra", numeric: true, sortable: true, value: (d) => d.deaths },
+    {
+      key: "diff",
+      header: "Saldo",
+      numeric: true,
+      sortable: true,
+      value: (d) => d.diff,
+      render: (d) => (
+        <span className="duel-diff" data-pos={posAttr(d.diff)}>
+          {fmtDiff(d.diff)}
+        </span>
+      )
+    }
+  ];
+
   const weaponPlayerKey = (player: PlayerWeaponStats) => player.steamId;
 
   const tabs: TabItem[] = [
@@ -371,32 +395,13 @@ export function MatchReport({ matchId }: { matchId: string }) {
                   </span>
                 </div>
               </div>
-              {duels.length === 0 ? (
-                <p className="state-note">Sem confrontos deste jogador contra adversários.</p>
-              ) : (
-                <table className="stat-table duel-table">
-                  <thead>
-                    <tr>
-                      <th>Oponente</th>
-                      <th>A favor</th>
-                      <th>Contra</th>
-                      <th>Saldo</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {duels.map((duel) => (
-                      <tr key={duel.opp}>
-                        <th scope="row">{label(duel.opp)}</th>
-                        <td>{duel.kills}</td>
-                        <td>{duel.deaths}</td>
-                        <td className="duel-diff" data-pos={posAttr(duel.diff)}>
-                          {fmtDiff(duel.diff)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
+              <DataTable
+                columns={duelColumns}
+                rows={duels}
+                getRowKey={(duel) => duel.opp}
+                initialSort={{ key: "diff", dir: "desc" }}
+                emptyLabel="Sem confrontos deste jogador contra adversários."
+              />
             </>
           )}
         </article>
